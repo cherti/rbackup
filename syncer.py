@@ -8,7 +8,22 @@ import os, shutil, configparser
 config = configparser.ConfigParser()
 config.read(conffile)
 
-def sync(source, backuppath, label):
+def simple_sync(src, dst, add_args=None):
+
+	rsync_cmd = ["rsync", "-a", "--delete", config.get('general', 'additional_rsync_args')]
+
+	if add_args:
+		rsync_cmd += [add_args]
+
+	rsync_cmd += [src, dst]
+	rsync_cmdstr = " ".join(rsync_cmd)
+
+	# sync to target
+	return os.system(rsync_cmdstr)
+
+
+
+def backup_sync(source, backuppath, label):
 	os.chdir(backuppath)
 
 	# filter for dirs with this label
@@ -20,17 +35,8 @@ def sync(source, backuppath, label):
 		os.system("cp -al {0}.0 in_progress_{0}".format(label))
 
 
-	#os.system("rsync -a --delete --exclude-from excludelist / {0}".format(targetpath))
-	rsync_cmd = ["rsync", "-a", "--delete"]
+	ret_rsync = simple_sync( source, "in_progress_{0}".format(label) )
 
-	# think of a way of implementing the exclude-list (either separate file or within config)
-
-	rsync_cmd += [source, "in_progress_{0}".format(label)]
-
-	# sync to target
-	rsync_cmdstr = " ".join(rsync_cmd)
-
-	ret_rsync = os.system(rsync_cmdstr)
 
 	if ret_rsync == 0: # only reorder if rsync finished successfully
 		#reorder backups

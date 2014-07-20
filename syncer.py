@@ -35,10 +35,22 @@ def backup_sync(source, backuppath, label):
 		os.system("cp -al {0}.0 in_progress_{0}".format(label))
 
 
-	ret_rsync = simple_sync( source, "in_progress_{0}".format(label) )
+	# prepare excludes and includes
+	add_rsync_args = []
+
+	if 'includelist' in config.options('general'):
+		add_rsync_args += ['--include-from'] + config.get('general', 'includelist')
+
+	if 'excludelist' in config.options('general'):
+		add_rsync_args += ['--exclude-from'] + config.get('general', 'excludelist')
+
+
+	# now SYNC!!!
+	ret_rsync = simple_sync( source, "in_progress_{0}".format(label), add_args=add_rsync_args)
 
 
 	if ret_rsync == 0: # only reorder if rsync finished successfully
+
 		#reorder backups
 		backupcount = int(config.get('labels', label))
 
@@ -57,3 +69,5 @@ def backup_sync(source, backuppath, label):
 		src = 'in_progress_{0}'.format(label)
 		dst = '{0}.0'.format(label)
 		shutil.move(src, dst)
+
+	return ret_rsync

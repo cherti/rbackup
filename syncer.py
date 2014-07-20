@@ -29,23 +29,25 @@ def sync(source, backuppath, label):
 
 	# sync to target
 	rsync_cmdstr = " ".join(rsync_cmd)
-	os.system(rsync_cmdstr)
 
-	#reorder backups
-	backupcount = int(config.get('labels', label))
+	ret_rsync = os.system(rsync_cmdstr)
 
-	if len(dirs) >= backupcount: # we need to delete the last one
-		dirname = '{0}.{1}'.format(label, backupcount-1)
-		shutil.rmtree(dirname)
-		dirs.remove(dirname)
-	
-	# now move everything by one
-	for i in range(len(dirs)-1, -1, -1):
-		src = '{0}.{1}'.format(label, i)
-		dst = '{0}.{1}'.format(label, i+1)
+	if ret_rsync == 0: # only reorder if rsync finished successfully
+		#reorder backups
+		backupcount = int(config.get('labels', label))
+
+		if len(dirs) >= backupcount: # we need to delete the last one
+			dirname = '{0}.{1}'.format(label, backupcount-1)
+			shutil.rmtree(dirname)
+			dirs.remove(dirname)
+
+		# now move everything by one
+		for i in range(len(dirs)-1, -1, -1):
+			src = '{0}.{1}'.format(label, i)
+			dst = '{0}.{1}'.format(label, i+1)
+			shutil.move(src, dst)
+
+		#finally move the synced one to the start
+		src = 'in_progress_{0}'.format(label)
+		dst = '{0}.0'.format(label)
 		shutil.move(src, dst)
-	
-	#finally move the synced one to the start
-	src = 'in_progress_{0}'.format(label)
-	dst = '{0}.0'.format(label)
-	shutil.move(src, dst)

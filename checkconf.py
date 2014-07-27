@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
-#confdir = '/etc/newrbackup'
-conffile = 'test.conf'
 
-import os, configparser
+import sys, os, configparser
+
+conffile = sys.argv[1]
+
+if not os.path.exists(conffile):
+	print('no such conffile')
+	sys.exit(1)
 
 config = configparser.ConfigParser()
 config.read(conffile)

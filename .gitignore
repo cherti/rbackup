@@ -1,0 +1,3 @@
+.excludelist
+__pycache__
+testing

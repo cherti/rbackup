@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #confdir = '/etc/newrbackup'
-conffile = 'test.conf'
+conffile = 'sample.conf'
 
 import os, shutil, configparser
 

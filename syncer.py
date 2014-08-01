@@ -39,10 +39,16 @@ def backup_sync(source, backuppath, label):
 	add_rsync_args = []
 
 	if 'includelist' in config.options('general'):
-		add_rsync_args += ['--include-from'] + config.get('general', 'includelist')
+		incl_lst = config.get('general', 'includelist')
+
+		if os.path.exists(incl_lst):
+			add_rsync_args += ['--include-from=' + config.get('general', 'includelist')]
 
 	if 'excludelist' in config.options('general'):
-		add_rsync_args += ['--exclude-from'] + config.get('general', 'excludelist')
+		excl_lst = config.get('general', 'includelist')
+
+		if os.path.exists(excl_lst):
+			add_rsync_args += ['--exclude-from=' + config.get('general', 'excludelist')]
 
 
 	# now SYNC!!!

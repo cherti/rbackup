@@ -34,6 +34,34 @@ def test_for_option(sec, opt):
 		return False
 
 
+def check_opt_validity(sec):
+	global errors_found
+
+	#pre
+	try: pre = config.get(section, 'pre')
+	except configparser.NoOptionError: pre = ''
+	
+	if pre != '' and not os.path.exists(pre):
+		errors_found = True
+		print('invalid path in {0}:pre'.format(section))
+	
+	#post
+	try: post = config.get(section, 'post')
+	except configparser.NoOptionError: post = ''
+	
+	if post != '' and not os.path.exists(post):
+		errors_found = True
+		print('invalid path in {0}:pre'.format(section))
+	
+	#backupdir
+	#parse
+	try: backupdir = config.get(section, 'backupdir')
+	except configparser.NoOptionError:
+		print('no backupdir specified', file=sys.stderr)
+		errors_found = False
+
+
+
 #check for mandatory labels
 general	= test_for_section('general')
 labels	= test_for_section('labels')

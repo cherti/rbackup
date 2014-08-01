@@ -5,8 +5,12 @@ import sys, os, configparser
 
 def checkconfiguration(conffile):
 
-	config = configparser.ConfigParser()
-	config.read(conffile)
+	try:
+		config = configparser.ConfigParser()
+		config.read(conffile)
+	except:
+		print('error parsing conffile, is some basic syntax wrong?', file=sys.stderr)
+		return True # early-errors_found
 
 	errors_found = False
 

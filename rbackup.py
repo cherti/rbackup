@@ -103,8 +103,6 @@ def prepare(prescript):
 			print('invalid backupdir', file=sys.stderr)
 			sys.exit(4)
 
-# lockfile
-# proper handling of returns
 
 while lock.isValid():
 	time.sleep(30)
@@ -130,7 +128,7 @@ if section == 'main': # system2backup
 
 		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
 
-elif not section in ['main', 'labels', 'general']:
+elif not section in ['main', 'labels', 'general']: # duplicate backup
 	mainpre, mainpost, src = getconf('main')
 	secpre, secpost, dst = getconf(section)
 

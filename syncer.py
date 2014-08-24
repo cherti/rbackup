@@ -15,8 +15,14 @@ def simple_sync(src, dst, add_args=None):
 	if add_args:
 		rsync_cmd += [add_args]
 
+	src = os.path.abspath(src) + '/'
+	dst = os.path.abspath(dst)
+
 	rsync_cmd += [src, dst]
+	#print(rsync_cmd)
 	rsync_cmdstr = " ".join(rsync_cmd)
+
+	#print(rsync_cmdstr)
 
 	# sync to target
 	return os.system(rsync_cmdstr)
@@ -45,7 +51,7 @@ def backup_sync(source, backuppath, label):
 			add_rsync_args += ['--include-from=' + config.get('general', 'includelist')]
 
 	if 'excludelist' in config.options('general'):
-		excl_lst = config.get('general', 'includelist')
+		excl_lst = config.get('general', 'excludelist')
 
 		if os.path.exists(excl_lst):
 			add_rsync_args += ['--exclude-from=' + config.get('general', 'excludelist')]

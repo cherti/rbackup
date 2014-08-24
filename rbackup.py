@@ -5,7 +5,6 @@ conffile = 'sample.conf'
 import syncer, configparser, sys, os, checkconf, lockfile, time
 
 #
-#
 # preparations
 #
 
@@ -55,8 +54,8 @@ def getconf(sec):
 	try: pre = config.get(sec, 'pre')
 	except configparser.NoOptionError: pre = ''
 
-	if not os.path.exists(pre):
-		print('pre-script for {0} is invalid, ignoring')
+	if pre != '' and not os.path.exists(pre):
+		print('path to pre-script for {0} is invalid, ignoring'.format(sec))
 		pre = ''
 
 
@@ -64,8 +63,8 @@ def getconf(sec):
 	try: post = config.get(sec, 'post')
 	except configparser.NoOptionError: post = ''
 
-	if not os.path.exists(post):
-		print('post-script for {0} is invalid, ignoring')
+	if post != '' and not os.path.exists(post):
+		print('path to post-script for {0} is invalid, ignoring'.format(sec))
 		post = ''
 
 
@@ -84,12 +83,12 @@ def getconf(sec):
 # everything fine, time to do some magic!
 #
 
-def prepare(prescript):
+def prepare(prescript, path):
 	"""
 	prepare by using pre-script and check if everything seems ok
 	"""
 
-	preret = os.system(pre)
+	preret = os.system(prescript)
 
 	if preret != 0:
 		if preret == 32256:
@@ -113,7 +112,7 @@ if section == 'main': # system2backup
 	pre, post, dst = getconf('main')
 	src = config.get('general', 'backupsource')
 
-	prepare(pre)
+	prepare(pre, dst)
 
 	rsync_ret = syncer.backup_sync(src, dst, label)
 
@@ -128,13 +127,14 @@ if section == 'main': # system2backup
 
 		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
 
-elif not section in ['main', 'labels', 'general']: # duplicate backup
+elif section not in ['main', 'labels', 'general']: # duplicate backup
 	mainpre, mainpost, src = getconf('main')
 	secpre, secpost, dst = getconf(section)
 
-	prepare(mainpre)
-	prepare(secpre)
+	prepare(mainpre, src)
+	prepare(secpre, dst)
 
+	print()
 	rsync_ret = syncer.simple_sync(src, dst)
 
 	if rsync_ret != 0:

@@ -10,7 +10,7 @@ def checkconfiguration(conffile):
 		config.read(conffile)
 	except:
 		print('error parsing conffile, is some basic syntax wrong?', file=sys.stderr)
-		return True # early-errors_found
+		return True # early-errors_found, need to abort already
 
 	errors_found = False
 
@@ -26,12 +26,24 @@ def checkconfiguration(conffile):
 
 	def test_for_option(sec, opt):
 		global errors_found
+
 		if opt in config.options(sec):
 			return True
 		else:
 			print('option "{0}" missing in section {1}'.format(opt, sec))
 			errors_found = True
 			return False
+
+
+	def check_absolute_path(path):
+		global errors_found # Fixme: seems not to work
+
+		if not os.path.isabs(path):
+			print('path {0} is not absolute, only absolute paths are allowed'.format(path), file=sys.stderr)
+			errors_found = True
+			return False
+		else:
+			return True
 
 
 	def check_opt_validity(sec):
@@ -41,21 +53,29 @@ def checkconfiguration(conffile):
 		try: pre = config.get(section, 'pre')
 		except configparser.NoOptionError: pre = ''
 
-		if pre != '' and not os.path.exists(pre):
-			errors_found = True
-			print('invalid path in {0}:pre'.format(section), file=sys.stderr)
+		if pre != '':
+			if os.path.exists(pre):
+				check_absolute_path(pre)
+			else:
+				errors_found = True
+				print('invalid path in {0}:pre'.format(section), file=sys.stderr)
 
 		#post
 		try: post = config.get(section, 'post')
 		except configparser.NoOptionError: post = ''
 
-		if post != '' and not os.path.exists(post):
-			errors_found = True
-			print('invalid path in {0}:pre'.format(section), file=sys.stderr)
+		if post != '':
+			if os.path.exists(post):
+				check_absolute_path(post)
+			else:
+				errors_found = True
+				print('invalid path in {0}:pre'.format(section), file=sys.stderr)
 
 		#backupdir
 		#parse
-		try: backupdir = config.get(section, 'backupdir')
+		try:
+			backupdir = config.get(section, 'backupdir')
+			check_absolute_path(backupdir)
 		except configparser.NoOptionError:
 			print('no backupdir specified', file=sys.stderr)
 			errors_found = False
@@ -68,8 +88,14 @@ def checkconfiguration(conffile):
 	main	= test_for_section('main')
 
 	if general:
-		test_for_option('general', 'backupsource')
 		test_for_option('general', 'additional_rsync_args')
+		test_for_option('general', 'backupsource')
+
+		# everything except for additional_rsync_args should be (absolute) paths
+		for opt in config.options('general'):
+			if opt != 'additional_rsync_args':
+				check_absolute_path(config.get('general', opt))
+
 
 
 	# check non-string-data types

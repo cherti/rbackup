@@ -28,6 +28,30 @@ def simple_sync(src, dst, add_args=None):
 	return os.system(rsync_cmdstr)
 
 
+def reorder_backupdirs(label, maxcount, directory=None):
+	if directory: # then switch to directory to ease latter code
+		# and save currentdir, of course
+		olddir = os.path.abspath(os.path.curdir)
+		os.chdir(directory)
+
+
+	dirs = [ d for d in os.listdir() if d.startswith(label) ]
+
+	if len(dirs) >= maxcount: # we need to delete the last one
+		dirname = '{0}.{1}'.format(label, maxcount-1)
+		shutil.rmtree(dirname)
+		dirs.remove(dirname)
+
+	# now move everything by one
+	for i in range(len(dirs)-1, -1, -1):
+		src = '{0}.{1}'.format(label, i)
+		dst = '{0}.{1}'.format(label, i+1)
+		shutil.move(src, dst)
+
+	if olddir: # if we changed, change back now
+		os.chdir(olddir)
+
+
 
 def backup_sync(source, backuppath, label):
 	os.chdir(backuppath)
@@ -66,16 +90,7 @@ def backup_sync(source, backuppath, label):
 		#reorder backups
 		backupcount = int(config.get('labels', label))
 
-		if len(dirs) >= backupcount: # we need to delete the last one
-			dirname = '{0}.{1}'.format(label, backupcount-1)
-			shutil.rmtree(dirname)
-			dirs.remove(dirname)
-
-		# now move everything by one
-		for i in range(len(dirs)-1, -1, -1):
-			src = '{0}.{1}'.format(label, i)
-			dst = '{0}.{1}'.format(label, i+1)
-			shutil.move(src, dst)
+		reorder_backupdirs(label, backupcount)
 
 		#finally move the synced one to the start
 		src = 'in_progress_{0}'.format(label)
@@ -83,3 +98,19 @@ def backup_sync(source, backuppath, label):
 		shutil.move(src, dst)
 
 	return ret_rsync
+
+
+def backup_copy(backuppath, srclabel, dstlabel):
+	os.chdir(backuppath)
+
+	# filter for dirs with this label for src and dst
+	srcdirs = [ d for d in os.listdir() if d.startswith(srclabel) ]
+	dstdirs = [ d for d in os.listdir() if d.startswith(dstlabel) ]
+
+	# get max number of dirs to store
+	dstmax = int(config.get('labels', dstlabel))
+
+	if not dstmax > len(dstdirs):
+		reorder_backupdirs(dstlabel, dstmax)
+
+	os.system("cp -al {0} {1}.0".format(srcdirs[-1], dstlabel))

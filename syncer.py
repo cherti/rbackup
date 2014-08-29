@@ -9,6 +9,9 @@ config = configparser.ConfigParser()
 config.read(conffile)
 
 def simple_sync(src, dst, add_args=None):
+	"""
+	sync two directories
+	"""
 
 	rsync_cmd = ["rsync", "-a", "--delete", config.get('general', 'additional_rsync_args')]
 
@@ -29,6 +32,13 @@ def simple_sync(src, dst, add_args=None):
 
 
 def reorder_backupdirs(label, maxcount, directory=None):
+	"""
+	shifting all directories of the given label back by one
+	to make space for the new backup as label.0
+	includes mechanism to delete the last one if too many directorys
+	are present
+	"""
+
 	if directory: # then switch to directory to ease latter code
 		# and save currentdir, of course
 		olddir = os.path.abspath(os.path.curdir)
@@ -54,6 +64,10 @@ def reorder_backupdirs(label, maxcount, directory=None):
 
 
 def backup_sync(source, backuppath, label):
+	"""
+	create a new backup snapshot from data into the backupdir
+	"""
+
 	os.chdir(backuppath)
 
 	# filter for dirs with this label
@@ -65,7 +79,7 @@ def backup_sync(source, backuppath, label):
 		os.system("cp -al {0}.0 in_progress_{0}".format(label))
 
 
-	# prepare excludes and includes
+	# prepare excludes and includes as arguments for latter rsync-use
 	add_rsync_args = []
 
 	if 'includelist' in config.options('general'):
@@ -85,7 +99,7 @@ def backup_sync(source, backuppath, label):
 	ret_rsync = simple_sync( source, "in_progress_{0}".format(label), add_args=add_rsync_args)
 
 
-	if ret_rsync == 0: # only reorder if rsync finished successfully
+	if ret_rsync == 0: # only continue if rsync finished successfully
 
 		#reorder backups
 		backupcount = int(config.get('labels', label))
@@ -101,6 +115,10 @@ def backup_sync(source, backuppath, label):
 
 
 def backup_copy(backuppath, srclabel, dstlabel):
+	"""
+	create a snapshot based on other latest snapshots
+	"""
+
 	os.chdir(backuppath)
 
 	# filter for dirs with this label for src and dst

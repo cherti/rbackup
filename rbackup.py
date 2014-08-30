@@ -32,7 +32,7 @@ parser.add_argument('-s', action='store_true', default=False, dest='store')
 parser.add_argument('-t', '--to', action='store', default=None, dest='to')
 
 # specify sourcedisk for duplication ('from')
-parser.add_argument('-f', '--from', action='store', default=None, dest='from')
+parser.add_argument('-f', '--from', action='store', default=None, dest='fro')
 
 # specify label (to use in case of backup)
 parser.add_argument('-l', '--label', action='store', default=None, dest='label')
@@ -41,13 +41,13 @@ args = parser.parse_args(sys.argv[1:])
 
 
 # check whether args are such that we can work with them
-checkconf.checkargs(args, config.sections())
+checkconf.checkargs(args, config)
 
 
-if args.b:
+if args.backup:
 	print('making backup to label {0} on device {1}'.format(args.label, args.to))
-elif section not in ['labels', 'general']:
-	print('duplicating backup from {0} to device {1}'.format(args.from, args.to))
+elif args.to not in ['labels', 'general']:
+	print('duplicating backup from {0} to device {1}'.format(args.fro, args.to))
 
 
 # parse configuration
@@ -132,7 +132,7 @@ if args.backup: # system2backup
 	else: # later label, sync from previous one
 
 		prev_label = labels[curr_label_index-1]
-		cp_ret = syncer.backup_copy(args.to, prev_label, args.label)
+		cp_ret = syncer.backup_copy(dst, prev_label, args.label)
 		if cp_ret != 0:
 			print('cp finished with errors: exit code {0}'.format(cp_ret), file=sys.stderr)
 
@@ -147,7 +147,7 @@ if args.backup: # system2backup
 		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
 
 else: # duplicate backup, args.d
-	srcpre, srcpost, src = getconf(args.from)
+	srcpre, srcpost, src = getconf(args.fro)
 	dstpre, dstpost, dst = getconf(args.to)
 
 	prepare(srcpre, src)
@@ -164,9 +164,9 @@ else: # duplicate backup, args.d
 
 	if postret != 0:
 		if preret == 32256:
-			print('no permission to execute post-script of device {0}; is it executable?'.format(args.from), file=sys.stderr)
+			print('no permission to execute post-script of device {0}; is it executable?'.format(args.fro), file=sys.stderr)
 
-		print('post-script for device {0} finished with errors: exit code {1}'.format(args.from, postret), file=sys.stderr)
+		print('post-script for device {0} finished with errors: exit code {1}'.format(args.fro, postret), file=sys.stderr)
 
 	postret = os.system(dstpost)
 

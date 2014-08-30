@@ -123,26 +123,45 @@ def checkconfiguration(conffile):
 
 
 
-def checkargs(args, sections=None):
+def checkargs(args, config=None):
 
 	if args.dupl == args.backup: # too much to do
 		print('select either duplication or backup', file=sys.stderr)
 		sys.exit(37)
 
-	if not args.dupl or args.backup: # nothing to do
+	if not (args.dupl or args.backup): # nothing to do
 		print('no mode selected, doing nothing')
 		sys.exit()
+	
+	# in case we didn't get a config, read it
+	if not config: 
+		config = configparser.ConfigParser()
+		config.read(conffile)
 
 	if not args.to:
 		print('no destination-device specified', file=sys.stderr)
 		sys.exit(37)
+	else:
+		# check if section is valid
+		secs = config.sections()
+		secs.remove('general')
+		secs.remove('labels')
 
-	if args.dupl:
-		if not args.from: # sourcedevice missing
-			print('no source-device specified', file=sys.stderr)
+		if args.to not in secs:
+			print('unknown destination-device specified', file=sys.stderr)
 			sys.exit(37)
 
-		if args.to == args.from:
+	if args.dupl:
+		if not args.fro: # sourcedevice missing
+			print('no source-device specified', file=sys.stderr)
+			sys.exit(37)
+		else:
+			# check if section is valid
+			if args.fro not in secs:
+				print('unknown source-device specified', file=sys.stderr)
+				sys.exit(37)
+
+		if args.to == args.fro:
 			print('What the heck is your plan, dude!?')
 			print("I'm a backup-tool, I'm not joining your crazyness.")
 	else: # args.backup
@@ -154,12 +173,7 @@ def checkargs(args, sections=None):
 			sys.exit(37)
 		else:
 			# check if label is valid
-			if not sections: # in case we didn't get any sections
-				config = configparser.ConfigParser()
-				config.read(conffile)
-				sections = config.sections()
-			
-			if args.label not in sections:
+			if args.label not in config.options('labels'):
 				print('unknown label specified', file=sys.stderr)
 				sys.exit(37)
 				

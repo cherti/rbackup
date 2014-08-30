@@ -3,7 +3,7 @@
 #confdir = '/etc/newrbackup'
 conffile = 'sample.conf'
 
-import os, shutil, configparser
+import os, sys, shutil, configparser, datetime
 
 config = configparser.ConfigParser()
 config.read(conffile)
@@ -16,13 +16,13 @@ def simple_sync(src, dst, add_args=None):
 	rsync_cmd = ["rsync", "-a", "--delete", config.get('general', 'additional_rsync_args')]
 
 	if add_args:
-		rsync_cmd += [add_args]
+		rsync_cmd += add_args
 
 	src = os.path.abspath(src) + '/'
 	dst = os.path.abspath(dst)
 
 	rsync_cmd += [src, dst]
-	#print(rsync_cmd)
+	print(rsync_cmd)
 	rsync_cmdstr = " ".join(rsync_cmd)
 
 	#print(rsync_cmdstr)
@@ -38,6 +38,8 @@ def reorder_backupdirs(label, maxcount, directory=None):
 	includes mechanism to delete the last one if too many directorys
 	are present
 	"""
+	
+	olddir = None
 
 	if directory: # then switch to directory to ease latter code
 		# and save currentdir, of course
@@ -45,18 +47,28 @@ def reorder_backupdirs(label, maxcount, directory=None):
 		os.chdir(directory)
 
 
-	dirs = [ d for d in os.listdir() if d.startswith(label) ]
+	dirs = sorted([ d for d in os.listdir() if d.startswith(label) ])
 
 	if len(dirs) >= maxcount: # we need to delete the last one
-		dirname = '{0}.{1}'.format(label, maxcount-1)
-		shutil.rmtree(dirname)
-		dirs.remove(dirname)
+		shutil.rmtree(dirs[-1])
+		dirs.remove(dirs[-1])
 
 	# now move everything by one
 	for i in range(len(dirs)-1, -1, -1):
 		src = '{0}.{1}'.format(label, i)
 		dst = '{0}.{1}'.format(label, i+1)
-		shutil.move(src, dst)
+		if os.path.exists(src): # if no dir, we do not need to move
+
+			if os.path.exists(dst):
+				# if we still have dst left, something is probably
+				# out of system. Remove those from the standard-tree
+				# and give notice for the user to check
+				os.mkdir('out-of-system')
+				now = datetime.datetime.today()
+				shutil.move(dst, 'out-of-system/{0}-{1}'.format(dst, now))
+				print('WARNING: Some folders might be out of system on device, should be checked', file=sys.stderr)
+
+			shutil.move(src, dst)
 
 	if olddir: # if we changed, change back now
 		os.chdir(olddir)
@@ -104,7 +116,8 @@ def backup_sync(source, backuppath, label):
 		#reorder backups
 		backupcount = int(config.get('labels', label))
 
-		reorder_backupdirs(label, backupcount)
+		if os.path.exists(label + '.0'):
+			reorder_backupdirs(label, backupcount)
 
 		#finally move the synced one to the start
 		src = 'in_progress_{0}'.format(label)
@@ -132,7 +145,9 @@ def backup_copy(backuppath, srclabel, dstlabel):
 	# get max number of dirs to store
 	dstmax = int(config.get('labels', dstlabel))
 
-	if not dstmax > len(dstdirs):
-		reorder_backupdirs(dstlabel, dstmax)
+	reorder_backupdirs(dstlabel, dstmax)
 
-	os.system("cp -al {0} {1}.0".format(srcdirs[-1], dstlabel))
+	print("cp -alT {0} {1}.0".format(srcdirs[-1], dstlabel))
+	cp_ret = os.system("cp -alT {0} {1}.0".format(srcdirs[-1], dstlabel))
+
+	return cp_ret

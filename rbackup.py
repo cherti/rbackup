@@ -2,7 +2,7 @@
 
 conffile = 'sample.conf'
 
-import syncer, configparser, sys, os, checkconf, lockfile, time
+import syncer, configparser, sys, os, checkconf, lockfile, time, argparse
 
 #
 # preparations
@@ -10,38 +10,44 @@ import syncer, configparser, sys, os, checkconf, lockfile, time
 
 conferrors = checkconf.checkconfiguration(conffile)
 
-if conferrors:
-	sys.exit(5)
-	# error announcement already made within checkconf
-
 config = configparser.ConfigParser()
 config.read(conffile)
 
 lock = lockfile.Lockfile(config.get('general', 'lockfile'))
 
-# properly interpret cmdline-args
-if len(sys.argv) > 2:
-	section = sys.argv[1]
-	label = sys.argv[2]
-	if label not in config.options('labels'):
-		print('unknown label {0}'.format(label))
-		sys.exit(1)
-elif len(sys.argv) > 1:
-	section = sys.argv[1]
-	if section == 'main':
-		print('missing label for section main', file=sys.stderr)
-		sys.exit(1)
-else:
-	print('not enough information', file=sys.stderr)
-	sys.exit(1)
+#
+# handle commandline-args
+#
+
+parser = argparse.ArgumentParser(description='some dummy description')
+
+# choose Backup or Duplicate
+parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup')
+parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl')
+
+# specify whether the run shall be stored in case of disk not becoming available
+parser.add_argument('-s', action='store_true', default=False, dest='store')
+
+# specify targetdisk via section ('to')
+parser.add_argument('-t', '--to', action='store', default=None, dest='to')
+
+# specify sourcedisk for duplication ('from')
+parser.add_argument('-f', '--from', action='store', default=None, dest='from')
+
+# specify label (to use in case of backup)
+parser.add_argument('-l', '--label', action='store', default=None, dest='label')
+
+args = parser.parse_args(sys.argv[1:])
 
 
-# print mark
+# check whether args are such that we can work with them
+checkconf.checkargs(args, config.sections())
 
-if section == 'main' and label:
-	print('making backup to {0} on {1}'.format(label, section))
-elif section not in ['main', 'labels', 'general']:
-	print('duplicating backup to {0}'.format(section))
+
+if args.b:
+	print('making backup to label {0} on device {1}'.format(args.label, args.to))
+elif section not in ['labels', 'general']:
+	print('duplicating backup from {0} to device {1}'.format(args.from, args.to))
 
 
 # parse configuration
@@ -103,22 +109,35 @@ def prepare(prescript, path):
 			sys.exit(4)
 
 
-while lock.isValid():
+while lock.isValid(): # wait for other processes to terminate
 	time.sleep(30)
 
 lock.create()
 
-if section == 'main': # system2backup
-	pre, post, dst = getconf('main')
+if args.backup: # system2backup
+	pre, post, dst = getconf(args.to)
 	src = config.get('general', 'backupsource')
 
 	prepare(pre, dst)
 
-	rsync_ret = syncer.backup_sync(src, dst, label)
+	# decide whether we want to sync a backup or to copy one
+	labels = config.options('labels')
+	curr_label_index = labels.index(args.label)
 
-	if rsync_ret != 0:
-		print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
+	if curr_label_index == 0: # first label, sync from source
+		rsync_ret = syncer.backup_sync(src, dst, args.label)
 
+		if rsync_ret != 0:
+			print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
+	else: # later label, sync from previous one
+
+		prev_label = labels[curr_label_index-1]
+		cp_ret = syncer.backup_copy(args.to, prev_label, args.label)
+		if cp_ret != 0:
+			print('cp finished with errors: exit code {0}'.format(cp_ret), file=sys.stderr)
+
+
+	# tidy up devices afterwards
 	postret = os.system(post)
 
 	if postret != 0:
@@ -127,12 +146,12 @@ if section == 'main': # system2backup
 
 		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
 
-elif section not in ['main', 'labels', 'general']: # duplicate backup
-	mainpre, mainpost, src = getconf('main')
-	secpre, secpost, dst = getconf(section)
+else: # duplicate backup, args.d
+	srcpre, srcpost, src = getconf(args.from)
+	dstpre, dstpost, dst = getconf(args.to)
 
-	prepare(mainpre, src)
-	prepare(secpre, dst)
+	prepare(srcpre, src)
+	prepare(dstpre, dst)
 
 	print()
 	rsync_ret = syncer.simple_sync(src, dst)
@@ -141,21 +160,21 @@ elif section not in ['main', 'labels', 'general']: # duplicate backup
 		print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
 
 
-	postret = os.system(mainpost)
+	postret = os.system(srcpost)
 
 	if postret != 0:
 		if preret == 32256:
-			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
+			print('no permission to execute post-script of device {0}; is it executable?'.format(args.from), file=sys.stderr)
 
-		print('post-script for section main finished with errors: exit code {0}'.format(postret), file=sys.stderr)
+		print('post-script for device {0} finished with errors: exit code {1}'.format(args.from, postret), file=sys.stderr)
 
-	postret = os.system(secpost)
+	postret = os.system(dstpost)
 
 	if postret != 0:
 		if preret == 32256:
-			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
+			print('no permission to execute post-script of device {0}; is it executable?'.format(args.to), file=sys.stderr)
 
-		print('post-script for section {0} finished with errors: exit code {1}'.format(section, postret), file=sys.stderr)
+		print('post-script for device {0} finished with errors: exit code {1}'.format(args.to, postret), file=sys.stderr)
 
 
 lock.remove()

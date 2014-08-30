@@ -125,6 +125,10 @@ def backup_copy(backuppath, srclabel, dstlabel):
 	srcdirs = [ d for d in os.listdir() if d.startswith(srclabel) ]
 	dstdirs = [ d for d in os.listdir() if d.startswith(dstlabel) ]
 
+	if len(srcdirs) == 0:
+		print('previous stage not existent, aborting', file=sys.stderr)
+		sys.exit(1)
+
 	# get max number of dirs to store
 	dstmax = int(config.get('labels', dstlabel))
 

@@ -119,9 +119,50 @@ def checkconfiguration(conffile):
 
 	if errors_found:
 		print('syntax-check of config-file finished with errors', file=sys.stderr)
+		sys.exit(35)
 
-	return errors_found
 
+
+def checkargs(args, sections=None):
+
+	if args.dupl == args.backup: # too much to do
+		print('select either duplication or backup', file=sys.stderr)
+		sys.exit(37)
+
+	if not args.dupl or args.backup: # nothing to do
+		print('no mode selected, doing nothing')
+		sys.exit()
+
+	if not args.to:
+		print('no destination-device specified', file=sys.stderr)
+		sys.exit(37)
+
+	if args.dupl:
+		if not args.from: # sourcedevice missing
+			print('no source-device specified', file=sys.stderr)
+			sys.exit(37)
+
+		if args.to == args.from:
+			print('What the heck is your plan, dude!?')
+			print("I'm a backup-tool, I'm not joining your crazyness.")
+	else: # args.backup
+		if not args.label: # label to backup to missing
+			print('no label to backup to specified', file=sys.stderr)
+			sys.exit(37)
+		elif args.label in ['labels', 'general']:
+			print('invalid label specified', file=sys.stderr)
+			sys.exit(37)
+		else:
+			# check if label is valid
+			if not sections: # in case we didn't get any sections
+				config = configparser.ConfigParser()
+				config.read(conffile)
+				sections = config.sections()
+			
+			if args.label not in sections:
+				print('unknown label specified', file=sys.stderr)
+				sys.exit(37)
+				
 
 
 

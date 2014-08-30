@@ -28,10 +28,12 @@ parser = argparse.ArgumentParser(description='some dummy description')
 parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup')
 parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl')
 
-parser.add_argument('-s', action='store_true', default=False, dest='store') # specify whether the run shall be stored in case of disk not becoming available
+parser.add_argument('-s', '--store', action='store_true', default=False, dest='store') # specify whether the run shall be stored in case of disk not becoming available
 parser.add_argument('-t', '--to', action='store', default=None, dest='to') # specify targetdisk via section ('to')
 parser.add_argument('-f', '--from', action='store', default=None, dest='fro') # specify sourcedisk for duplication ('from')
 parser.add_argument('-l', '--label', action='store', default=None, dest='label') # specify label (to use in case of backup)
+
+parser.add_argument('-q', '--quiet', action='store_true', default=False, dest='quiet') # no output to stderr for most errors
 
 args = parser.parse_args(sys.argv[1:])
 
@@ -44,6 +46,10 @@ if args.backup:
 	print('making backup to label {0} on device {1}'.format(args.label, args.to))
 elif args.to not in ['labels', 'general']:
 	print('duplicating backup from {0} to device {1}'.format(args.fro, args.to))
+
+
+if args.quiet: # if the user wanted to have a quiet run
+	sys.stderr = sys.stdout # everything written to stderr goes to stdout instead
 
 
 # parse configuration

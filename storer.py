@@ -42,7 +42,9 @@ def store(args, storefile):
 
 	# store this run
 	with open(storefile, 'a') as f:
-		print(jobstring, file=f)
+		print(jobstr, file=f)
+
+	print('jobstring {0} stored to be done later'.format(jobstr))
 
 
 def run_stored(storefile, skip_job=None):
@@ -58,13 +60,15 @@ def run_stored(storefile, skip_job=None):
 			# duplicates from a list
 			runs = list(set(f.read().strip().split('\n')))
 
+			print(runs)
+
 			if skip_job and skip_job in runs:
 				# we don't need to run the exact same job
 				# twice at the same time, would be pointless
 				runs.remove(skip_job)
 
-		# remove storefile, if jobs of it fail they will be rewritten
-		# automatically to a new storefile
+		# remove storefile, if jobs of it fail again they will be
+		# rewritten automatically to a new storefile
 		os.remove(storefile)
 
 		backups = [ run for run in runs if run.startswith('backup') ]
@@ -81,19 +85,22 @@ def run_stored(storefile, skip_job=None):
 			if 'quiet' in options:
 				args += ['--quiet']
 
+			# extract an option, take the first one as rbackup doesn't store it twice
 			opt_to = [ to for to in options if to.startswith('to') ]
-			if opt_to:
-				_, to = opt_to.split('=')
+			if len(opt_to) > 0:
+				_, to = opt_to[0].split('=')
 				cmdstring += ['--to', to]
 
-			opt_from = [ fro for fro in options if fro.startswith('fro') ]
-			if opt_fro:
-				_, fro = opt_fro.split('=')
+			# extract an option, take the first one as rbackup doesn't store it twice
+			opt_fro = [ fro for fro in options if fro.startswith('fro') ]
+			if len(opt_fro) > 0:
+				_, fro = opt_fro[0].split('=')
 				cmdstring += ['--from', fro]
 
+			# extract an option, take the first one as rbackup doesn't store it twice
 			opt_label = [ l for l in options if l.startswith('label') ]
-			if opt_label:
-				_, label = opt_label.split('=')
+			if len(opt_label) > 0:
+				_, label = opt_label[0].split('=')
 				cmdstring += ['--label', label]
 
 			return cmdstring
@@ -102,7 +109,8 @@ def run_stored(storefile, skip_job=None):
 		for backupset in backups:
 			# evaluate optionstring and build cmdlinestring
 			options = backupset.split(' ')
-			cmdstr = ['rbackup', '--backup', '--store']
+			# --no-pending is especially importaint, otherwise we have an infinite loop
+			cmdstr = ['rbackup.py', '--backup', '--store', '--no-pending']
 			cmdstr = finish_cmdlinestring(cmdstr, options)
 
 			# finally we have a cmdlinestring, now GO FOR IT:
@@ -112,7 +120,7 @@ def run_stored(storefile, skip_job=None):
 		for duplset in duplis:
 			# evaluate optionstring and build cmdlinestring
 			options = duplset.split(' ')
-			cmdstr = ['rbackup', '--duplication', '--store']
+			cmdstr = ['rbackup.py', '--duplication', '--store']
 			cmdstr = finish_cmdlinestring(cmdstr, options)
 
 			# finally we have a cmdlinestring, now GO FOR IT:

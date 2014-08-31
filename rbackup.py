@@ -44,9 +44,10 @@ args = parser.parse_args(sys.argv[1:])
 checkconf.checkargs(args, config)
 
 if not args.nopending:
-	storer.run_stored(config.get('general', 'pendingfile')
+	currjob = storer.jobstring(args)
+	storer.run_stored(config.get('general', 'pendingfile', skip_job=currjob)
 
-def exit(exitcode):
+def rbackup_exit(exitcode):
 	if args.store:
 		storer.store(args, config.get('general', 'pendingfile'))
 	sys.exit(exitcode)
@@ -94,7 +95,7 @@ def getconf(sec):
 	try: path = config.get(sec, 'backupdir')
 	except configparser.NoOptionError:
 		print('no backupdir specified', file=sys.stderr)
-		exit(3) # exit, without backupdir there is no point in continuing
+		rbackup_exit(3) # exit, without backupdir there is no point in continuing
 
 
 	return pre, post, path
@@ -116,12 +117,12 @@ def prepare(prescript, path):
 			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
 
 		print('prescript {0} exited nonzero, exiting as well'.format(prescript), file=sys.stderr)
-		exit(6) # pre exited nonzero, so we assume not to have device, no point in continuing
+		rbackup_exit(6) # pre exited nonzero, so we assume not to have device, no point in continuing
 	else:
 		#check validity of mountpoint/backuppath
 		if not os.path.exists(path):
 			print('invalid backupdir', file=sys.stderr)
-			exit(4) # without valid backupdir there is no point in continuing
+			rbackup_exit(4) # without valid backupdir there is no point in continuing
 
 
 while lock.isValid(): # wait for other processes of this kind to terminate via block

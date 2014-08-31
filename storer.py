@@ -2,7 +2,7 @@
 
 import os
 
-def store(args, storefile):
+def jobstring(args):
 	options = []
 	if args.backup:
 		options += ['backup']
@@ -20,7 +20,12 @@ def store(args, storefile):
 	if args.quiet:
 		options += ['quiet']
 
-	#print(' '.join(options))
+	return ' '.join(options)
+
+
+def store(args, storefile):
+
+	jobstr = jobstring(args)
 
 	# check whether filesystem-structure of storefile exists
 	# create if not
@@ -30,18 +35,26 @@ def store(args, storefile):
 
 	# store this run
 	with open(storefile, 'a') as f:
-		print(' '.join(options), file=f)
+		print(jobstring, file=f)
 
 
-def run_stored(storefile):
+def run_stored(storefile, skip_job=None):
 
 	if os.path.exists(storefile):
 
 		with open(storefile, 'r') as f:
+			# read jobstrings into list;
+			# list(set(somelist)) is an easy way of removing
+			# duplicates from a list
 			runs = list(set(f.read().strip().split('\n')))
 
+			if skip_job and skip_job in runs:
+				# we don't need to run the exact same job
+				# twice at the same time, would be pointless
+				runs.remove(skip_job)
+
 		# remove storefile, if jobs of it fail they will be rewritten
-		# automatically
+		# automatically to a new storefile
 		os.remove(storefile)
 
 		backups = [ run for run in runs if run.startswith('backup') ]

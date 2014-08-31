@@ -24,7 +24,7 @@ lock = lockfile.Lockfile(config.get('general', 'lockfile'))
 
 # now parse commandline-args
 
-parser = argparse.ArgumentParser(description='some dummy description')
+parser = argparse.ArgumentParser(description='rbackup - rsync-based backuptool')
 # choose Backup or Duplicate
 parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup', help='create a new backup')
 parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl', help='duplicate backups to another device')
@@ -32,7 +32,7 @@ parser.add_argument('-d', '--duplicate', action='store_true', default=False, des
 parser.add_argument('-s', '--store', action='store_true', default=False, dest='store', help='the run shall be stored and be repeated later in case of disk not becoming available or other problems occur')
 parser.add_argument('--no-pending', action='store_true', default=False, dest='nopending', help='stored jobs shall NOT be run beforehand')
 
-parser.add_argument('-t', '--to', action='store', default=None, dest='to', help='targetdisk (via its sectionname)'
+parser.add_argument('-t', '--to', action='store', default=None, dest='to', help='targetdisk (via its sectionname)')
 parser.add_argument('-f', '--from', action='store', default=None, dest='fro', help='sourcedisk (for duplication; via its sectionname)')
 parser.add_argument('-l', '--label', action='store', default=None, dest='label', help='specify label to backup to (for backup)')
 

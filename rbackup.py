@@ -3,6 +3,7 @@
 conffile = 'sample.conf'
 
 import syncer, configparser, sys, os, checkconf, lockfile, time, argparse
+import storer
 
 
 """
@@ -29,6 +30,8 @@ parser.add_argument('-b', '--backup', action='store_true', default=False, dest='
 parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl')
 
 parser.add_argument('-s', '--store', action='store_true', default=False, dest='store') # specify whether the run shall be stored in case of disk not becoming available
+parser.add_argument('--no-pending', action='store_true', default=False, dest='nopending') # specify whether the stored jobs shall NOT be run before this one
+
 parser.add_argument('-t', '--to', action='store', default=None, dest='to') # specify targetdisk via section ('to')
 parser.add_argument('-f', '--from', action='store', default=None, dest='fro') # specify sourcedisk for duplication ('from')
 parser.add_argument('-l', '--label', action='store', default=None, dest='label') # specify label (to use in case of backup)
@@ -39,6 +42,14 @@ args = parser.parse_args(sys.argv[1:])
 
 # check whether args are such that we can work with them
 checkconf.checkargs(args, config)
+
+if not args.nopending:
+	storer.run_stored(config.get('general', 'pendingfile')
+
+def exit(exitcode):
+	if args.store:
+		storer.store(args, config.get('general', 'pendingfile'))
+	sys.exit(exitcode)
 
 
 # giving status update what will be done (for user or logs)
@@ -83,7 +94,7 @@ def getconf(sec):
 	try: path = config.get(sec, 'backupdir')
 	except configparser.NoOptionError:
 		print('no backupdir specified', file=sys.stderr)
-		sys.exit(3) # exit, without backupdir there is no point in continuing
+		exit(3) # exit, without backupdir there is no point in continuing
 
 
 	return pre, post, path
@@ -105,12 +116,12 @@ def prepare(prescript, path):
 			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
 
 		print('prescript {0} exited nonzero, exiting as well'.format(prescript), file=sys.stderr)
-		sys.exit(6) # pre exited nonzero, so we assume not to have device, no point in continuing
+		exit(6) # pre exited nonzero, so we assume not to have device, no point in continuing
 	else:
 		#check validity of mountpoint/backuppath
 		if not os.path.exists(path):
 			print('invalid backupdir', file=sys.stderr)
-			sys.exit(4) # without valid backupdir there is no point in continuing
+			exit(4) # without valid backupdir there is no point in continuing
 
 
 while lock.isValid(): # wait for other processes of this kind to terminate via block

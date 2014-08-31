@@ -90,6 +90,7 @@ def checkconfiguration(conffile):
 	if general:
 		test_for_option('general', 'additional_rsync_args')
 		test_for_option('general', 'backupsource')
+		test_for_option('general', 'pendingfile')
 
 		# everything except for additional_rsync_args should be (absolute) paths
 		for opt in config.options('general'):

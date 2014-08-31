@@ -26,17 +26,18 @@ lock = lockfile.Lockfile(config.get('general', 'lockfile'))
 
 parser = argparse.ArgumentParser(description='some dummy description')
 # choose Backup or Duplicate
-parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup')
-parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl')
+parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup', help='create a new backup')
+parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl', help='duplicate backups to another device')
 
-parser.add_argument('-s', '--store', action='store_true', default=False, dest='store') # specify whether the run shall be stored in case of disk not becoming available
-parser.add_argument('--no-pending', action='store_true', default=False, dest='nopending') # specify whether the stored jobs shall NOT be run before this one
+parser.add_argument('-s', '--store', action='store_true', default=False, dest='store', help='the run shall be stored and be repeated later in case of disk not becoming available or other problems occur')
+parser.add_argument('--no-pending', action='store_true', default=False, dest='nopending', help='stored jobs shall NOT be run beforehand')
 
-parser.add_argument('-t', '--to', action='store', default=None, dest='to') # specify targetdisk via section ('to')
-parser.add_argument('-f', '--from', action='store', default=None, dest='fro') # specify sourcedisk for duplication ('from')
-parser.add_argument('-l', '--label', action='store', default=None, dest='label') # specify label (to use in case of backup)
+parser.add_argument('-t', '--to', action='store', default=None, dest='to', help='targetdisk (via its sectionname)'
+parser.add_argument('-f', '--from', action='store', default=None, dest='fro', help='sourcedisk (for duplication; via its sectionname)')
+parser.add_argument('-l', '--label', action='store', default=None, dest='label', help='specify label to backup to (for backup)')
 
-parser.add_argument('-q', '--quiet', action='store_true', default=False, dest='quiet') # no output to stderr for most errors
+parser.add_argument('-q', '--quiet', action='store_true', default=False, dest='redirect_stderr', help='redirect output to stderr to stdout')
+parser.add_argument('-Q', '--Quiet', action='store_true', default=False, dest='suppress_stderr', help='suppress output to stderr entirely')
 
 args = parser.parse_args(sys.argv[1:])
 
@@ -44,8 +45,10 @@ args = parser.parse_args(sys.argv[1:])
 checkconf.checkargs(args, config)
 
 if not args.nopending:
+	print('doing stored jobs')
 	currjob = storer.jobstring(args)
-	storer.run_stored(config.get('general', 'pendingfile', skip_job=currjob)
+	pendfile = config.get('general', 'pendingfile')
+	storer.run_stored(pendfile, skip_job=currjob)
 
 def rbackup_exit(exitcode):
 	if args.store:
@@ -60,8 +63,10 @@ elif args.to not in ['labels', 'general']:
 	print('duplicating backup from {0} to device {1}'.format(args.fro, args.to))
 
 
-if args.quiet: # if the user wanted to have a quiet run
+if args.redirect_stderr: # if the user wanted to have a quiet run
 	sys.stderr = sys.stdout # everything written to stderr goes to stdout instead
+elif args.suppress_stderr:
+	sys.stderr = open(os.devnull, 'w') # redirects sys.stderr to /dev/null
 
 
 # parse configuration

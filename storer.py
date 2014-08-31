@@ -3,6 +3,10 @@
 import os
 
 def jobstring(args):
+	"""
+	create unique jobstring for the job triggered by the given arguments
+	"""
+
 	options = []
 	if args.backup:
 		options += ['backup']
@@ -24,6 +28,9 @@ def jobstring(args):
 
 
 def store(args, storefile):
+	"""
+	store unique job-identifier in a file to do it later
+	"""
 
 	jobstr = jobstring(args)
 
@@ -39,6 +46,9 @@ def store(args, storefile):
 
 
 def run_stored(storefile, skip_job=None):
+	"""
+	try to run all stored jobs in subshell
+	"""
 
 	if os.path.exists(storefile):
 

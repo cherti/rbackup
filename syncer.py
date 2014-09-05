@@ -5,10 +5,8 @@ conffile = 'sample.conf'
 
 import os, sys, shutil, configparser, datetime
 
-config = configparser.ConfigParser()
-config.read(conffile)
 
-def simple_sync(src, dst, add_args=None):
+def simple_sync(src, dst, config, add_args=None):
 	"""
 	simply sync two directories using the additional rsync-arguments provided
 	"""
@@ -81,7 +79,7 @@ def reorder_backupdirs(label, maxcount, directory=None):
 
 
 
-def backup_sync(source, backuppath, label):
+def backup_sync(source, backuppath, label, config):
 	"""
 	create a new backup snapshot from data into the backupdir
 	on lowest stage (higher stages are done by backup_copy()
@@ -116,7 +114,7 @@ def backup_sync(source, backuppath, label):
 
 
 	# now SYNC!!!
-	ret_rsync = simple_sync( source, "in_progress_{0}".format(label), add_args=add_rsync_args)
+	ret_rsync = simple_sync( source, "in_progress_{0}".format(label), config, add_args=add_rsync_args)
 
 
 	if ret_rsync == 0: # only continue if rsync finished successfully

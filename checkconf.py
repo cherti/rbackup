@@ -126,6 +126,10 @@ def checkconfiguration(conffile):
 
 def checkargs(args, config=None):
 
+	if not os.path.exists(args.conffile):
+		print('invalid configuration specified', file=sys.stderr)
+		sys.exit(38)
+
 	if args.dupl == args.backup: # too much to do
 		print('select either duplication or backup', file=sys.stderr)
 		sys.exit(37)
@@ -134,10 +138,11 @@ def checkargs(args, config=None):
 		print('no mode selected, doing nothing')
 		sys.exit()
 	
-	# in case we didn't get a config, read it
+	# in case we didn't get a config, read it (and check it beforehand)
 	if not config: 
+		checkconfiguration(args.conffile)
 		config = configparser.ConfigParser()
-		config.read(conffile)
+		config.read(args.conffile)
 
 	if not args.to:
 		print('no destination-device specified', file=sys.stderr)

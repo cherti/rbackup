@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-conffile = 'sample.conf'
-
 import syncer, configparser, sys, os, checkconf, lockfile, time, argparse
 import storer
 
@@ -9,17 +7,6 @@ import storer
 """
  preparations
 """
-
-
-# check configuration validity
-checkconf.checkconfiguration(conffile)
-
-# parse configuration
-config = configparser.ConfigParser()
-config.read(conffile)
-
-# prepare lockfile
-lock = lockfile.Lockfile(config.get('general', 'lockfile'))
 
 
 # now parse commandline-args
@@ -36,6 +23,7 @@ parser.add_argument('-t', '--to', action='store', default=None, dest='to', help=
 parser.add_argument('-f', '--from', action='store', default=None, dest='fro', help='sourcedisk (for duplication; via its sectionname)')
 parser.add_argument('-l', '--label', action='store', default=None, dest='label', help='specify label to backup to (for backup)')
 
+parser.add_argument('-c', '--config', action='store', default='sample.conf', dest='conffile', help='redirect output to stderr to stdout')
 parser.add_argument('-q', '--quiet', action='store_true', default=False, dest='redirect_stderr', help='redirect output to stderr to stdout')
 parser.add_argument('-Q', '--Quiet', action='store_true', default=False, dest='suppress_stderr', help='suppress output to stderr entirely')
 
@@ -43,6 +31,19 @@ args = parser.parse_args(sys.argv[1:])
 
 # check whether args are such that we can work with them
 checkconf.checkargs(args, config)
+
+
+# check configuration validity
+checkconf.checkconfiguration(args.conffile)
+
+# parse configuration
+config = configparser.ConfigParser()
+config.read(args.conffile)
+
+# prepare lockfile
+lock = lockfile.Lockfile(config.get('general', 'lockfile'))
+
+
 
 if not args.nopending:
 	print('doing stored jobs')
@@ -148,7 +149,7 @@ if args.backup: # we want to create a backup
 
 
 	if curr_label_index == 0: # it's the first label, so sync a new backup
-		rsync_ret = syncer.backup_sync(src, dst, args.label)
+		rsync_ret = syncer.backup_sync(src, dst, args.label, config) # ACTION !!!
 
 		if rsync_ret != 0:
 			print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
@@ -156,7 +157,7 @@ if args.backup: # we want to create a backup
 	else: # higher-order label, copy a backup into a later stage
 		prev_label = labels[curr_label_index-1] # get the previous label to copy from
 
-		cp_ret = syncer.backup_copy(dst, prev_label, args.label) # ACTION!!!
+		cp_ret = syncer.backup_copy(dst, prev_label, args.label, config) # ACTION !!!
 
 		if cp_ret != 0:
 			print('cp finished with errors: exit code {0}'.format(cp_ret), file=sys.stderr)
@@ -180,7 +181,7 @@ else: # duplicate backup to another disk, args.dupl == True
 	prepare(srcpre, src)
 	prepare(dstpre, dst)
 
-	rsync_ret = syncer.simple_sync(src, dst)
+	rsync_ret = syncer.simple_sync(src, dst, config)
 
 	if rsync_ret != 0:
 		print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)

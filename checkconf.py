@@ -127,7 +127,7 @@ def checkconfiguration(conffile):
 def checkargs(args, config=None):
 
 	if not os.path.exists(args.conffile):
-		print('invalid configuration specified', file=sys.stderr)
+		print('invalid configuration-file specified', file=sys.stderr)
 		sys.exit(38)
 
 	if args.dupl == args.backup: # too much to do

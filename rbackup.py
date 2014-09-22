@@ -23,7 +23,7 @@ parser.add_argument('-t', '--to', action='store', default=None, dest='to', help=
 parser.add_argument('-f', '--from', action='store', default=None, dest='fro', help='sourcedisk (for duplication; via its sectionname)')
 parser.add_argument('-l', '--label', action='store', default=None, dest='label', help='specify label to backup to (for backup)')
 
-parser.add_argument('-c', '--config', action='store', default='/etc/rbackup/rbackup.conf', dest='conffile', help='redirect output to stderr to stdout')
+parser.add_argument('-c', '--config', action='store', default='/etc/rbackup/rbackup.conf', dest='conffile', help='specify alternative configuration-file')
 parser.add_argument('-q', '--quiet', action='store_true', default=False, dest='redirect_stderr', help='redirect output to stderr to stdout')
 parser.add_argument('-Q', '--Quiet', action='store_true', default=False, dest='suppress_stderr', help='suppress output to stderr entirely')
 

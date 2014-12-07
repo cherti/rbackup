@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import syncer, configparser, sys, os, checkconf, lockfile, time, argparse
-import storer
+import configparser, sys, os, time, argparse
+import storer, syncer, lockfile, checkconf
 
 
 """

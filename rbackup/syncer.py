@@ -90,7 +90,7 @@ def backup_sync(source, backuppath, label, config):
 	dirs = sorted([d for d in os.listdir() if d.startswith(label)])
 
 	if len(dirs) == 0: # we have no backups yet, therefore start from scratch
-		os.mkdir("in_progress_{0}".format(label))
+		os.makedirs("in_progress_{0}".format(label), exist_ok=True)
 	else: # backups present, take one and update it (faster & saves space)
 		os.system("cp -al {0} in_progress_{1}".format(dirs[0], label))
 

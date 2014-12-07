@@ -85,7 +85,6 @@ def checkconfiguration(conffile):
 	#check for mandatory labels
 	general	= test_for_section('general')
 	labels	= test_for_section('labels')
-	main	= test_for_section('main')
 
 	if general:
 		test_for_option('general', 'additional_rsync_args')
@@ -111,7 +110,7 @@ def checkconfiguration(conffile):
 
 	# cycle over backuptargets
 	for key in config.sections():
-		if key in ['main', 'general', 'labels']: # no backuptargets
+		if key in ['general', 'labels']: # no backuptargets
 			continue
 		else:
 			if not len(config.get(key, 'backupdir')) > 0: # if we have no backupdir...
@@ -182,7 +181,7 @@ def checkargs(args, config=None):
 			if args.label not in config.options('labels'):
 				print('unknown label specified', file=sys.stderr)
 				sys.exit(37)
-				
+
 
 
 

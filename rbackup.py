@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description='rbackup - rsync-based backuptool')
 # choose Backup or Duplicate
 parser.add_argument('-b', '--backup', action='store_true', default=False, dest='backup', help='create a new backup')
 parser.add_argument('-d', '--duplicate', action='store_true', default=False, dest='dupl', help='duplicate backups to another device')
+parser.add_argument('-k', '--checkconf', action='store_true', default=False, dest='chkcfg', help='just check configuration for errors')
 
 parser.add_argument('-s', '--store', action='store_true', default=False, dest='store', help='the run shall be stored and be repeated later in case of disk not becoming available or other problems occur')
 parser.add_argument('--no-pending', action='store_true', default=False, dest='nopending', help='stored jobs shall NOT be run beforehand')
@@ -29,11 +30,17 @@ parser.add_argument('-Q', '--Quiet', action='store_true', default=False, dest='s
 
 args = parser.parse_args(sys.argv[1:])
 
+if args.chkcfg: # just check configuration and exit
+	checkconf.checkconfiguration(args.conffile)
+	sys.exit(0)
+
+
 # check whether args are such that we can work with them
 checkconf.checkargs(args)
 
 # check configuration validity
 checkconf.checkconfiguration(args.conffile)
+
 
 # parse configuration
 config = configparser.ConfigParser()

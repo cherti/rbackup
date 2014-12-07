@@ -20,7 +20,6 @@ def simple_sync(src, dst, config, add_args=None):
 	dst = os.path.abspath(dst)
 
 	rsync_cmd += [src, dst]
-	print(rsync_cmd)
 	rsync_cmdstr = " ".join(rsync_cmd)
 
 	#print(rsync_cmdstr)

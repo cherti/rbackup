@@ -179,8 +179,8 @@ if args.backup: # we want to create a backup
 	postret = run_cmd(post, postto)
 
 	if postret != 0:
-		if preret == 32256: # no-permission-error
-			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
+		if postret == 32256: # no-permission-error
+			print('no permission to execute post-script; is it executable?', file=sys.stderr)
 
 		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
 

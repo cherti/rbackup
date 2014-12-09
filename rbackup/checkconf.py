@@ -46,30 +46,48 @@ def checkconfiguration(conffile):
 			return True
 
 
-	def check_opt_validity(sec):
+	def check_opt_validity(section):
 		global errors_found
 
-		#pre
-		try: pre = config.get(section, 'pre')
-		except configparser.NoOptionError: pre = ''
+		# preexec
+		try: preexec = config.get(section, 'preexec')
+		except configparser.NoOptionError: preexec = ''
 
-		if pre != '':
-			if os.path.exists(pre):
-				check_absolute_path(pre)
+		if preexec != '':
+			if os.path.exists(preexec):
+				check_absolute_path(preexec)
 			else:
 				errors_found = True
-				print('invalid path in {0}:pre'.format(section), file=sys.stderr)
+				print('invalid path in {0}:preexec'.format(section), file=sys.stderr)
 
-		#post
-		try: post = config.get(section, 'post')
-		except configparser.NoOptionError: post = ''
+		# postexec
+		try: postexec = config.get(section, 'postexec')
+		except configparser.NoOptionError: postexec = ''
 
-		if post != '':
-			if os.path.exists(post):
-				check_absolute_path(post)
+		if postexec != '':
+			if os.path.exists(postexec):
+				check_absolute_path(postexec)
 			else:
 				errors_found = True
-				print('invalid path in {0}:pre'.format(section), file=sys.stderr)
+				print('invalid path in {0}:preexec'.format(section), file=sys.stderr)
+
+		# timeouts
+		try: preto = config.get(section, 'pretimeout')
+		except configparser.NoOptionError: preto = '60'
+
+		try: float(preto)
+		except ValueError:
+			print('invalid value in {0}:pretimeout'.format(section))
+			errors_found = False
+
+		try: postto = config.get(section, 'posttimeout')
+		except configparser.NoOptionError: postto = '60'
+
+		try: float(postto)
+		except ValueError:
+			print('invalid value in {0}:posttimeout'.format(section))
+			errors_found = False
+
 
 		#backupdir
 		#parse

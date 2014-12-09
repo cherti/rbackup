@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import configparser, sys, os, time, argparse
-from rbackup import storer, syncer, lockfile, checkconf
+from rbackup import storer, syncer, lockfile, checkconf, run_cmd
 
 
 """
@@ -84,7 +84,7 @@ def getconf(sec):
 	"""
 
 	#parsing pre
-	try: pre = config.get(sec, 'pre') # returns pre if pre exists in conf
+	try: pre = config.get(sec, 'preexec') # returns pre if pre exists in conf
 	except configparser.NoOptionError: pre = '' # else keep empty
 
 	# now validate if we can find the potential pre-script
@@ -94,7 +94,7 @@ def getconf(sec):
 
 
 	#parsing post
-	try: post = config.get(sec, 'post') # returns post if post exists in conf
+	try: post = config.get(sec, 'postexec') # returns post if post exists in conf
 	except configparser.NoOptionError: post = '' # else keep empty
 
 	# now validate if we can find the potential post-script
@@ -102,6 +102,11 @@ def getconf(sec):
 		print('path to post-script for {0} is invalid, ignoring'.format(sec))
 		post = ''
 
+	try: preto = float(config.get(sec, 'pretimeout')) # returns post if post exists in conf
+	except configparser.NoOptionError: preto = 60 # else use default
+
+	try: postto = float(config.get(sec, 'posttimeout')) # returns post if post exists in conf
+	except configparser.NoOptionError: postto = 60 # else keep empty
 
 	#backupdir
 	#parse
@@ -111,19 +116,19 @@ def getconf(sec):
 		rbackup_exit(3) # exit, without backupdir there is no point in continuing
 
 
-	return pre, post, path
+	return pre, preto, post, postto, path
 
 
 #
 # everything fine, time to do some magic!
 #
 
-def prepare(prescript, path):
+def prepare(prescript, preto, path):
 	"""
 	prepare by using pre-script and check if everything seems ok
 	"""
 
-	preret = os.system(prescript) # make specified preparations
+	preret = run_cmd(prescript, preto) # make specified preparations
 
 	if preret != 0:
 		if preret == 32256: # no-permission-error
@@ -145,10 +150,10 @@ while lock.isValid(): # wait for other processes of this kind to terminate via b
 lock.create()
 
 if args.backup: # we want to create a backup
-	pre, post, dst = getconf(args.to) # get configuration
+	pre, preto, post, postto, dst = getconf(args.to) # get configuration
 	src = config.get('general', 'backupsource') # get source-directory
 
-	prepare(pre, dst)
+	prepare(pre, preto, dst)
 
 	# decide whether we want to sync a entirely new backup or to copy one to a later stage
 	labels = config.options('labels') # get list of labels from config
@@ -171,7 +176,7 @@ if args.backup: # we want to create a backup
 
 
 	# tidy up devices afterwards
-	postret = os.system(post)
+	postret = run_cmd(post, postto)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error
@@ -182,11 +187,11 @@ if args.backup: # we want to create a backup
 else: # duplicate backup to another disk, args.dupl == True
 
 	# get configuration
-	srcpre, srcpost, src = getconf(args.fro)
-	dstpre, dstpost, dst = getconf(args.to)
+	srcpre, srcpreto, srcpost, srcpostto, src = getconf(args.fro)
+	dstpre, dstpreto, dstpost, dstpostto, dst = getconf(args.to)
 
-	prepare(srcpre, src)
-	prepare(dstpre, dst)
+	prepare(srcpre, srcpreto, src)
+	prepare(dstpre, srcpostto, dst)
 
 	rsync_ret = syncer.simple_sync(src, dst, config)
 
@@ -196,7 +201,7 @@ else: # duplicate backup to another disk, args.dupl == True
 
 	# tidy up afterwards
 
-	postret = os.system(srcpost)
+	postret = run_cmd(srcpost, srcpostto)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error
@@ -205,7 +210,7 @@ else: # duplicate backup to another disk, args.dupl == True
 		print('post-script for device {0} finished with errors: exit code {1}'.format(args.fro, postret), file=sys.stderr)
 
 	# tidy up afterwards
-	postret = os.system(dstpost)
+	postret = run_cmd(dstpost, dstpostto)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error

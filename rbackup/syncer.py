@@ -88,11 +88,14 @@ def backup_sync(source, backuppath, label, config):
 
 	# filter for dirs with this label
 	dirs = sorted([d for d in os.listdir() if d.startswith(label)])
+	inprogress = "in_progress_{0}".format(label)
 
 	if len(dirs) == 0: # we have no backups yet, therefore start from scratch
-		os.makedirs("in_progress_{0}".format(label), exist_ok=True)
+		os.makedirs(inprogress, exist_ok=True)
 	else: # backups present, take one and update it (faster & saves space)
-		os.system("cp -al {0} in_progress_{1}".format(dirs[0], label))
+		if os.path.exists(inprogress):
+			shutil.rmtree(inprogress)
+		os.system("cp -al {0} {1}".format(dirs[0], inprogress))
 
 
 	# prepare excludes and includes as arguments for latter rsync-use

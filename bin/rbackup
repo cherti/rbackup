@@ -201,6 +201,8 @@ else: # duplicate backup to another disk, args.dupl == True
 
 	# tidy up afterwards
 
+	time.sleep(5)
+
 	postret = run_cmd(srcpost, srcpostto)
 
 	if postret != 0:

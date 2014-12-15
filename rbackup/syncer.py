@@ -25,10 +25,14 @@ def simple_sync(src, dst, config, add_args=None):
 	#print(rsync_cmdstr)
 
 	# sync to target
-	return os.system(rsync_cmdstr)
 
+	print('starting with rsync')
+	rsync_ret = os.system(rsync_cmdstr)
+	print('finished with rsync')
 
-def reorder_backupdirs(label, maxcount, directory=None):
+	return rsync_ret
+
+def reorder_backupdirs(label, maxcount, dir):
 	"""
 	shifting all directories of the given label back by one
 	to make space for the new backup as label.0
@@ -38,17 +42,18 @@ def reorder_backupdirs(label, maxcount, directory=None):
 	the system to order the backups. Shouldn't have to be used, but
 	one never knows
 	"""
-	
+
+	"""
 	olddir = None # used in case of chdir
 
 	if directory: # then switch to directory to ease latter code
 		# and save currentdir, of course, to switch back later
 		olddir = os.path.abspath(os.path.curdir)
 		os.chdir(directory)
-
+	"""
 
 	# get the directories in question to be reordered
-	dirs = sorted([ d for d in os.listdir() if d.startswith(label) ])
+	dirs = sorted([ os.path.join(dir, d) for d in os.listdir(dir) if d.startswith(label) ])
 
 	# handle "overgrowth"
 	if len(dirs) >= maxcount: # we need to delete the last one
@@ -57,8 +62,8 @@ def reorder_backupdirs(label, maxcount, directory=None):
 
 	# now move everything back by one
 	for i in range(len(dirs)-1, -1, -1):
-		src = '{0}.{1}'.format(label, i)
-		dst = '{0}.{1}'.format(label, i+1)
+		src = os.path.join(dir, '{0}.{1}'.format(label, i))
+		dst = os.path.join(dir, '{0}.{1}'.format(label, i+1))
 		if os.path.exists(src): # if no dir, we do not need to move
 
 			if os.path.exists(dst):
@@ -66,15 +71,20 @@ def reorder_backupdirs(label, maxcount, directory=None):
 				# out of system. Remove those from the standard-tree
 				# save them into a separate folder with date appended
 				# and give notice for the user to check
-				os.mkdir('out-of-system')
+				oosdir = os.path.join(dir, 'out-of-system')
+				os.mkdir(oosdir)
 				now = datetime.datetime.today()
-				shutil.move(dst, 'out-of-system/{0}-{1}'.format(dst, now))
+				shutil.move(dst, os.path.join(oosdir, '{0}-{1}'.format(dst, now)))
 				print('WARNING: Some folders might be out of system on device, should be checked', file=sys.stderr)
 
+			print('start move')
 			shutil.move(src, dst)
+			print('finished move')
 
+	"""
 	if olddir: # if we changed directory, change back now
 		os.chdir(olddir)
+	"""
 
 
 
@@ -84,18 +94,36 @@ def backup_sync(source, backuppath, label, config):
 	on lowest stage (higher stages are done by backup_copy()
 	"""
 
+	"""
 	os.chdir(backuppath)
+	"""
+
+	bup = backuppath
 
 	# filter for dirs with this label
-	dirs = sorted([d for d in os.listdir() if d.startswith(label)])
-	inprogress = "in_progress_{0}".format(label)
+	dirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(label) ])
+
+	print(bup)
+	print(dirs)
+
+	# create basedir to which we want to backup now,
+	# either by hardlink-copying an old one or by creating it
+	fulltempdstdir = os.path.join(bup, "in_progress_{0}".format(label))
+	if os.path.exists(fulltempdstdir):
+		shutil.rmtree(fulltempdstdir)
 
 	if len(dirs) == 0: # we have no backups yet, therefore start from scratch
-		os.makedirs(inprogress, exist_ok=True)
+		os.makedirs(fulltempdstdir, exist_ok=True)
 	else: # backups present, take one and update it (faster & saves space)
-		if os.path.exists(inprogress):
-			shutil.rmtree(inprogress)
-		os.system("cp -al {0} {1}".format(dirs[0], inprogress))
+		if os.path.exists(fulltempdstdir):
+			shutil.rmtree(fulltempdstdir)
+		#fullsrcdir = dirs[0]
+		print(dirs[0])
+		print(fulltempdstdir)
+		print("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
+		print('start with cp')
+		os.system("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
+		print('done with cp')
 
 
 	# prepare excludes and includes as arguments for latter rsync-use
@@ -116,7 +144,7 @@ def backup_sync(source, backuppath, label, config):
 
 
 	# now SYNC!!!
-	ret_rsync = simple_sync( source, "in_progress_{0}".format(label), config, add_args=add_rsync_args)
+	ret_rsync = simple_sync( source, fulltempdstdir, config, add_args=add_rsync_args)
 
 
 	if ret_rsync == 0: # only continue if rsync finished successfully
@@ -125,13 +153,13 @@ def backup_sync(source, backuppath, label, config):
 		backupcount = int(config.get('labels', label))
 
 		# if the one we want to use is free, we do not need to reorder
-		if os.path.exists(label + '.0'): 
+		if os.path.exists(os.path.join(bup, label + '.0')):
 			# if label.0 is already in use, then we have to
-			reorder_backupdirs(label, backupcount)
+			reorder_backupdirs(label, backupcount, bup)
 
 		#finally move the synced one to the start
-		src = 'in_progress_{0}'.format(label)
-		dst = '{0}.0'.format(label)
+		src = fulltempdstdir
+		dst = os.path.join(bup, '{0}.0'.format(label))
 		shutil.move(src, dst)
 
 	return ret_rsync
@@ -140,16 +168,19 @@ def backup_sync(source, backuppath, label, config):
 def backup_copy(backuppath, srclabel, dstlabel):
 	"""
 	create a snapshot based on other latest snapshots for
-	higher stages 
+	higher stages
 	"""
 
+	bup = backuppath
+	"""
 	os.chdir(backuppath)
+	"""
 
 	# filter for dirs with this label for src and dst
-	srcdirs = sorted([ d for d in os.listdir() if d.startswith(srclabel) ])
-	dstdirs = sorted([ d for d in os.listdir() if d.startswith(dstlabel) ])
+	srcdirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(srclabel) ])
+	dstdirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(dstlabel) ])
 
-	if len(srcdirs) == 0: # if we have no sourcen, we cannot do anything
+	if len(srcdirs) == 0: # if we have no sources, we cannot do anything
 		print('previous stage not existent, aborting', file=sys.stderr)
 		sys.exit(1)
 
@@ -157,10 +188,13 @@ def backup_copy(backuppath, srclabel, dstlabel):
 	dstmax = int(config.get('labels', dstlabel))
 
 	# reordering only necessary if label.0 is already in use
-	if os.path.exists('{0}.0'.format(dstlabel)):
-		reorder_backupdirs(dstlabel, dstmax) # free label.0
+	targetpath = os.path.join(bup, '{0}.0'.format(dstlabel))
+	if os.path.exists(targetpath):
+		reorder_backupdirs(dstlabel, dstmax, bup) # free label.0
 
 	# create the new backup for this stage
-	cp_ret = os.system("cp -alT {0} {1}.0".format(srcdirs[-1], dstlabel))
+	#srcpath = scrdirs[-1]
+	print('cp2')
+	cp_ret = os.system("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
 
 	return cp_ret

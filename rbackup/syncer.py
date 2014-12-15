@@ -151,7 +151,7 @@ def backup_sync(source, backuppath, label, config):
 		backupcount = int(config.get('labels', label))
 
 		# if the one we want to use is free, we do not need to reorder
-		if os.path.exists(label + '.0'): 
+		if os.path.exists(os.path.join(bup, label + '.0')):
 			# if label.0 is already in use, then we have to
 			reorder_backupdirs(label, backupcount, bup)
 
@@ -166,7 +166,7 @@ def backup_sync(source, backuppath, label, config):
 def backup_copy(backuppath, srclabel, dstlabel):
 	"""
 	create a snapshot based on other latest snapshots for
-	higher stages 
+	higher stages
 	"""
 
 	bup = backuppath

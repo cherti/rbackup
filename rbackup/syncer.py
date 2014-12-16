@@ -166,7 +166,7 @@ def backup_sync(source, backuppath, label, config):
 	return ret_rsync
 
 
-def backup_copy(backuppath, srclabel, dstlabel):
+def backup_copy(backuppath, srclabel, dstlabel, config):
 	"""
 	create a snapshot based on other latest snapshots for
 	higher stages

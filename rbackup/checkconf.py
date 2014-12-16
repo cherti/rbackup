@@ -5,139 +5,108 @@ import sys, os, configparser
 
 def checkconfiguration(conffile):
 
+	dlabelvals = {'preexec':'', 'pretimeout':'60', 'postexec':'', 'posttimeout':60}
+	dgeneral = {'lockfile':'/run/rbackup-lockfile', 'additional_rsync_args:':'', 'backupsource':None}
+
 	try:
 		config = configparser.ConfigParser()
 		config.read(conffile)
 	except:
-		print('error parsing conffile, is some basic syntax wrong?', file=sys.stderr)
-		return True # early-errors_found, need to abort already
+		print('error parsing config-file, is some basic syntax wrong?', file=sys.stderr)
+		sys.exit(1)  # early-errors_found, need to abort already
 
-	errors_found = False
+	# make config to *real* dict
+	conf = dict(config)
+	for key in conf:
+		if key != 'DEFAULT':
+			conf[key] = dict(conf[key])
 
-	def test_for_section(sec):
-		global errors_found
-		if sec in config.sections():
-			return True
-		else:
-			print('section "{0}" missing'.format(sec))
-			errors_found = True
-			return False
+	critical = False
 
+	def warn(message):
+		print('::(?) ' + message, file=sys.stderr)
 
-	def test_for_option(sec, opt):
-		global errors_found
-
-		if opt in config.options(sec):
-			return True
-		else:
-			print('option "{0}" missing in section {1}'.format(opt, sec))
-			errors_found = True
-			return False
+	def crit(message):
+		print('::(!) ' + message, file=sys.stderr)
+		return True
 
 
-	def check_absolute_path(path):
-		global errors_found # Fixme: seems not to work
+	if not set(['general', 'labels']).issubset(conf):
+		warn('section "general" and/or "label" missing')
 
-		if not os.path.isabs(path):
-			print('path {0} is not absolute, only absolute paths are allowed'.format(path), file=sys.stderr)
-			errors_found = True
-			return False
-		else:
-			return True
+	for section in conf:
+		if section == 'general':
+			for key in conf['general']:
+				if key == 'lockfile':
+					default = dgeneral.pop('lockfile')
+					entry = conf['general'][key]
 
+					if not os.path.isabs(entry):
+						warn('general:lockfile - path not absolute, using ' + default)
 
-	def check_opt_validity(section):
-		global errors_found
+					elif not os.path.isdir(os.path.dirname(entry)):
+						warn("general:lockfile - directory doesn't exist, using " + default)
 
-		# preexec
-		try: preexec = config.get(section, 'preexec')
-		except configparser.NoOptionError: preexec = ''
+				elif key == 'backupsource':
+					dgeneral.pop('backupsource')
+					srcs = conf['general']['backupsource'].strip().split()
+					for src in srcs:
+						if not (os.path.isdir(src) or os.path.isfile(src)):
+							warn('backupsource:{0} is neither directory nor file'.format(src))
 
-		if preexec != '':
-			if os.path.exists(preexec):
-				check_absolute_path(preexec)
-			else:
-				errors_found = True
-				print('invalid path in {0}:preexec'.format(section), file=sys.stderr)
+			# now check remainings for necessary values:
+			for key in dgeneral:
+				if key in ['backupsorce']:
+					critical = crit('general:{0} missing'.format(key))
 
-		# postexec
-		try: postexec = config.get(section, 'postexec')
-		except configparser.NoOptionError: postexec = ''
+			# now set the remaining missings as defaults
+			for key in dgeneral:
+				conf['general'][key] = dgeneral[key]
 
-		if postexec != '':
-			if os.path.exists(postexec):
-				check_absolute_path(postexec)
-			else:
-				errors_found = True
-				print('invalid path in {0}:preexec'.format(section), file=sys.stderr)
+		elif section == 'labels':
+			for key in conf['labels']:
+				try:
+					conf['labels'][key] = int(conf['labels'][key])
+				except ValueError:
+					critical = crit('labels:{0} is no int'.format(key))
 
-		# timeouts
-		try: preto = config.get(section, 'pretimeout')
-		except configparser.NoOptionError: preto = '60'
+		else:  # all the backup-targets
 
-		try: float(preto)
-		except ValueError:
-			print('invalid value in {0}:pretimeout'.format(section))
-			errors_found = False
+			secdict = conf[section]  # stortcut to shorten latter code
 
-		try: postto = config.get(section, 'posttimeout')
-		except configparser.NoOptionError: postto = '60'
+			if 'preexec' in secdict and secdict['preexec'] != '':
+				prescript = secdict['preexec']
+				if not os.path.isfile(prescript):
+					critical = crit('{0}:preexec is no file'.format(section))
+				if not os.path.isabs(prescript):
+					critical = crit('path of {0}:preexec is not absolute'.format(section))
 
-		try: float(postto)
-		except ValueError:
-			print('invalid value in {0}:posttimeout'.format(section))
-			errors_found = False
+				if 'pretimeout' in secdict:
+					try:
+						secdict['pretimeout'] = int(secdict['pretimeout'])
+					except ValueError:
+						warn('{0}:pretimeout is no int, using {1}'.format(section, dlabelvals['pretimeout']))
+						secdict['pretimeout'] = dlabelvals['pretimeout']
 
+			if 'postexec' in secdict and secdict['postexec'] != '':
+				postscript = secdict['postexec']
+				if not os.path.isfile(postscript):
+					critical = crit('{0}:postexec is no file'.format(section))
+				if not os.path.isabs(postscript):
+					critical = crit('path of {0}:postexec is not absolute'.format(section))
 
-		#backupdir
-		#parse
-		try:
-			backupdir = config.get(section, 'backupdir')
-			check_absolute_path(backupdir)
-		except configparser.NoOptionError:
-			print('no backupdir specified', file=sys.stderr)
-			errors_found = False
-
-
-
-	#check for mandatory labels
-	general	= test_for_section('general')
-	labels	= test_for_section('labels')
-
-	if general:
-		test_for_option('general', 'additional_rsync_args')
-		test_for_option('general', 'backupsource')
-		test_for_option('general', 'pendingfile')
-
-		# everything except for additional_rsync_args should be (absolute) paths
-		for opt in config.options('general'):
-			if opt != 'additional_rsync_args':
-				check_absolute_path(config.get('general', opt))
+				if 'posttimeout' in secdict:
+					try:
+						secdict['posttimeout'] = int(secdict['posttimeout'])
+					except ValueError:
+						warn('{0}:posttimeout is no int, using {1}'.format(section, dlabelvals['posttimeout']))
+						secdict['posttimeout'] = dlabelvals['posttimeout']
 
 
+	if critical:
+		sys.exit(1)
 
-	# check non-string-data types
-	if labels:
-		for opt in config.options('labels'):
-			try:
-				int(config.get('labels', opt))
-			except ValueError:
-				print('labels: {0} is not int'.format(opt), file=sys.stderr)
-				errors_found = True
-
-
-	# cycle over backuptargets
-	for key in config.sections():
-		if key in ['general', 'labels']: # no backuptargets
-			continue
-		else:
-			if not len(config.get(key, 'backupdir')) > 0: # if we have no backupdir...
-				print("Problem with {0}-backupdir".format(key), file=sys.stderr)
-				errors_found = True
-
-	if errors_found:
-		print('syntax-check of config-file finished with errors', file=sys.stderr)
-		sys.exit(35)
+	return conf
 
 
 
@@ -147,26 +116,24 @@ def checkargs(args, config=None):
 		print('invalid configuration-file specified', file=sys.stderr)
 		sys.exit(38)
 
-	if args.dupl == args.backup: # too much to do
+	if args.dupl and args.backup: # too much to do
 		print('select either duplication or backup', file=sys.stderr)
 		sys.exit(37)
 
 	if not (args.dupl or args.backup): # nothing to do
 		print('no mode selected, doing nothing')
 		sys.exit()
-	
+
 	# in case we didn't get a config, read it (and check it beforehand)
 	if not config: 
-		checkconfiguration(args.conffile)
-		config = configparser.ConfigParser()
-		config.read(args.conffile)
+		config = checkconfiguration(args.conffile)
 
 	if not args.to:
 		print('no destination-device specified', file=sys.stderr)
 		sys.exit(37)
 	else:
 		# check if section is valid
-		secs = config.sections()
+		secs = list(config.keys()).copy()
 		secs.remove('general')
 		secs.remove('labels')
 
@@ -196,7 +163,7 @@ def checkargs(args, config=None):
 			sys.exit(37)
 		else:
 			# check if label is valid
-			if args.label not in config.options('labels'):
+			if args.label not in config['labels']:
 				print('unknown label specified', file=sys.stderr)
 				sys.exit(37)
 
@@ -211,9 +178,8 @@ if __name__ == '__main__':
 		print('no such conffile', file=sys.stderr)
 		sys.exit(1)
 
-	errors_found = checkconfiguration(conffile)
+	conf = checkconfiguration(conffile)
 
-	if not errors_found:
-		print('check finished')
-		print('no errors found')
+	print('check finished')
+	print('no errors found')
 

@@ -35,22 +35,14 @@ if args.chkcfg: # just check configuration and exit
 	checkconf.checkconfiguration(args.conffile)
 	sys.exit(0)
 
+# parse config and check configuration validity
+config = checkconf.checkconfiguration(args.conffile)
 
 # check whether args are such that we can work with them
-checkconf.checkargs(args)
-
-# check configuration validity
-checkconf.checkconfiguration(args.conffile)
-
-
-# parse configuration
-config = configparser.ConfigParser()
-config.read(args.conffile)
+checkconf.checkargs(args, config=config)
 
 # prepare lockfile
 lock = lockfile.Lockfile(config.get('general', 'lockfile'))
-
-
 
 if not args.nopending:
 	print('doing stored jobs')

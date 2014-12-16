@@ -11,7 +11,7 @@ def simple_sync(src, dst, config, add_args=None):
 	simply sync two directories using the additional rsync-arguments provided
 	"""
 
-	rsync_cmd = ["rsync", "-a", "--delete", config.get('general', 'additional_rsync_args')]
+	rsync_cmd = ["rsync", "-a", "--delete", config['general']['additional_rsync_args']]
 
 	if add_args:
 		rsync_cmd += add_args
@@ -130,17 +130,17 @@ def backup_sync(source, backuppath, label, config):
 	add_rsync_args = [] # to store the additional args like in- and excludes
 
 	# in- and excludelist are only used if they are specified
-	if 'includelist' in config.options('general'):
-		incl_lst = config.get('general', 'includelist')
+	if 'includelist' in config['general']:
+		incl_lst = config['general']['includelist']
 
 		if os.path.exists(incl_lst): # use only if path is valid
-			add_rsync_args += ['--include-from=' + config.get('general', 'includelist')]
+			add_rsync_args += ['--include-from=' + config['general']['includelist']]
 
-	if 'excludelist' in config.options('general'):
-		excl_lst = config.get('general', 'excludelist')
+	if 'excludelist' in config['general']:
+		excl_lst = config['general']['excludelist']
 
 		if os.path.exists(excl_lst): # use only if path is valid
-			add_rsync_args += ['--exclude-from=' + config.get('general', 'excludelist')]
+			add_rsync_args += ['--exclude-from=' + config['general']['excludelist']]
 
 
 	# now SYNC!!!
@@ -150,7 +150,7 @@ def backup_sync(source, backuppath, label, config):
 	if ret_rsync == 0: # only continue if rsync finished successfully
 
 		#reorder backups
-		backupcount = int(config.get('labels', label))
+		backupcount = config['labels'][label]
 
 		# if the one we want to use is free, we do not need to reorder
 		if os.path.exists(os.path.join(bup, label + '.0')):
@@ -185,7 +185,7 @@ def backup_copy(backuppath, srclabel, dstlabel):
 		sys.exit(1)
 
 	# get max number of dirs to store
-	dstmax = int(config.get('labels', dstlabel))
+	dstmax = config['labels'][dstlabel]
 
 	# reordering only necessary if label.0 is already in use
 	targetpath = os.path.join(bup, '{0}.0'.format(dstlabel))

@@ -1,4 +1,4 @@
-import subprocess, threading
+import subprocess, threading, sys
 
 
 def run_cmd(cmd, timeout=0):

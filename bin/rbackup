@@ -42,17 +42,16 @@ config = checkconf.checkconfiguration(args.conffile)
 checkconf.checkargs(args, config=config)
 
 # prepare lockfile
-lock = lockfile.Lockfile(config.get('general', 'lockfile'))
+lock = lockfile.Lockfile(config['general']['lockfile'])
 
 if not args.nopending:
 	print('doing stored jobs')
 	currjob = storer.jobstring(args)
-	pendfile = config.get('general', 'pendingfile')
-	storer.run_stored(pendfile, skip_job=currjob)
+	storer.run_stored(config['general']['pendingfile'], skip_job=currjob)
 
 def rbackup_exit(exitcode):
 	if args.store:
-		storer.store(args, config.get('general', 'pendingfile'))
+		storer.store(args, config['general']['pendingfile'])
 	sys.exit(exitcode)
 
 
@@ -76,7 +75,7 @@ def getconf(sec):
 	"""
 
 	#parsing pre
-	try: pre = config.get(sec, 'preexec') # returns pre if pre exists in conf
+	try: pre = config[sec]['preexec'] # returns pre if pre exists in conf
 	except configparser.NoOptionError: pre = '' # else keep empty
 
 	# now validate if we can find the potential pre-script
@@ -86,7 +85,7 @@ def getconf(sec):
 
 
 	#parsing post
-	try: post = config.get(sec, 'postexec') # returns post if post exists in conf
+	try: post = config[sec]['postexec'] # returns post if post exists in conf
 	except configparser.NoOptionError: post = '' # else keep empty
 
 	# now validate if we can find the potential post-script
@@ -94,15 +93,15 @@ def getconf(sec):
 		print('path to post-script for {0} is invalid, ignoring'.format(sec))
 		post = ''
 
-	try: preto = float(config.get(sec, 'pretimeout')) # returns post if post exists in conf
+	try: preto = float(config[sec]['pretimeout']) # returns post if post exists in conf
 	except configparser.NoOptionError: preto = 60 # else use default
 
-	try: postto = float(config.get(sec, 'posttimeout')) # returns post if post exists in conf
+	try: postto = float(config[sec]['posttimeout']) # returns post if post exists in conf
 	except configparser.NoOptionError: postto = 60 # else keep empty
 
 	#backupdir
 	#parse
-	try: path = config.get(sec, 'backupdir')
+	try: path = config[sec]['backupdir']
 	except configparser.NoOptionError:
 		print('no backupdir specified', file=sys.stderr)
 		rbackup_exit(3) # exit, without backupdir there is no point in continuing
@@ -143,12 +142,13 @@ lock.create()
 
 if args.backup: # we want to create a backup
 	pre, preto, post, postto, dst = getconf(args.to) # get configuration
-	src = config.get('general', 'backupsource') # get source-directory
+	src = config['general']['backupsource'] # get source-directory
 
 	prepare(pre, preto, dst)
 
 	# decide whether we want to sync a entirely new backup or to copy one to a later stage
-	labels = config.options('labels') # get list of labels from config
+	labels = list(config['labels']) # get list of labels from config
+	print(labels)
 	curr_label_index = labels.index(args.label) # get the index of the current label in list
 
 

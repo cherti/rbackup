@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os
+import os, subprocess
 
 def jobstring(args):
 	"""
@@ -114,7 +114,8 @@ def run_stored(storefile, skip_job=None):
 			cmdstr = finish_cmdlinestring(cmdstr, options)
 
 			# finally we have a cmdlinestring, now GO FOR IT:
-			os.system(' '.join(cmdstr))
+			#os.system(' '.join(cmdstr))
+			subprocess.call(cmdstr)
 
 
 		for duplset in duplis:
@@ -124,4 +125,5 @@ def run_stored(storefile, skip_job=None):
 			cmdstr = finish_cmdlinestring(cmdstr, options)
 
 			# finally we have a cmdlinestring, now GO FOR IT:
-			os.system(' '.join(cmdstr))
+			#os.system(' '.join(cmdstr))
+			subprocess.call(cmdstr)

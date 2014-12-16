@@ -3,7 +3,7 @@
 #confdir = '/etc/newrbackup'
 conffile = 'sample.conf'
 
-import os, sys, shutil, configparser, datetime
+import os, sys, shutil, configparser, datetime, subprocess
 
 
 def simple_sync(src, dst, config, add_args=None):
@@ -11,7 +11,8 @@ def simple_sync(src, dst, config, add_args=None):
 	simply sync two directories using the additional rsync-arguments provided
 	"""
 
-	rsync_cmd = ["rsync", "-a", "--delete", config['general']['additional_rsync_args']]
+	rsync_cmd = ["rsync", "-a", "--delete"]
+	rsync_cmd += config['general']['additional_rsync_args'].split()
 
 	if add_args:
 		rsync_cmd += add_args
@@ -20,17 +21,16 @@ def simple_sync(src, dst, config, add_args=None):
 	dst = os.path.abspath(dst)
 
 	rsync_cmd += [src, dst]
-	rsync_cmdstr = " ".join(rsync_cmd)
 
-	#print(rsync_cmdstr)
+	#print(" ".join(rsync_cmd))
 
 	# sync to target
-
 	print('starting with rsync')
-	rsync_ret = os.system(rsync_cmdstr)
+	rsync_ret = subprocess.call(rsync_cmd)
 	print('finished with rsync')
 
 	return rsync_ret
+
 
 def reorder_backupdirs(label, maxcount, dir):
 	"""
@@ -122,7 +122,8 @@ def backup_sync(source, backuppath, label, config):
 		print(fulltempdstdir)
 		print("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
 		print('start with cp')
-		os.system("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
+		cpret = subprocess.call(['cp', '-al', dirs[0], fulltempdstdir])
+		#os.system("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
 		print('done with cp')
 
 
@@ -195,6 +196,7 @@ def backup_copy(backuppath, srclabel, dstlabel):
 	# create the new backup for this stage
 	#srcpath = scrdirs[-1]
 	print('cp2')
-	cp_ret = os.system("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
+	#cp_ret = os.system("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
+	cp_ret = subprocess.call(['cp', '-alT', srcdirs[-1], targetpath])
 
 	return cp_ret

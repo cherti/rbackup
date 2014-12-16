@@ -147,7 +147,6 @@ def backup_sync(source, backuppath, label, config):
 	# now SYNC!!!
 	ret_rsync = simple_sync( source, fulltempdstdir, config, add_args=add_rsync_args)
 
-
 	if ret_rsync == 0: # only continue if rsync finished successfully
 
 		#reorder backups

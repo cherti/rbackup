@@ -28,3 +28,25 @@ def run_cmd(cmd, timeout=0):
 	p.communicate()
 
 	return p.returncode
+
+
+def prepare(prescript, preto, path, config):
+	"""
+	prepare device by using pre-script and check if everything seems ok
+	if we can't get the device up and running, exit here as there is no
+	point in continuing without one of the necessary devices.
+	The job is stored in the specified pendingfile if specified so when
+	calling rbackup
+	"""
+
+	preret = run_cmd(prescript, preto) # make specified preparations
+
+	if preret != 0:
+		if preret == 32256: # no-permission-error
+			print('no permission to execute pre-script; is it executable?', file=sys.stderr)
+
+		print('prescript {0} exited nonzero, exiting as well'.format(prescript), file=sys.stderr)
+
+		if config['args'].store:
+			storer.store(config['args'], config['general']['pendingfile'])
+		sys.exit(1)

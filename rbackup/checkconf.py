@@ -18,8 +18,18 @@ def checkconfiguration(conffile):
 	# make config to *real* dict
 	conf = dict(config)
 	for key in conf:
-		if key != 'DEFAULT':
+		if key not in ['DEFAULT', 'labels']:
 			conf[key] = dict(conf[key])
+
+	# we need to give a special treatment to the label-section when converting
+	# otherwise we risk loosing the order in the configuration which is necessary
+	# in fact, when converting to a dict we end up having no order anymore, which
+	# is bad for our concept 
+	conf['general']['labelorder'] = list(conf['labels'])
+
+	# now, as we have the labelorder, we can finish converting everything
+	# to a dict for easier handling
+	conf['labels'] = dict(conf['labels'])
 
 	critical = False
 
@@ -53,6 +63,13 @@ def checkconfiguration(conffile):
 					for src in srcs:
 						if not (os.path.isdir(src) or os.path.isfile(src)):
 							warn('backupsource:{0} is neither directory nor file'.format(src))
+
+				elif key == 'pendingfile':
+					entry = conf['general'][key]
+					if not os.path.isdir(os.path.dirname(entry)):
+						warn('directory of pendingfile invalid, cannot store jobs')
+						config['general']['pendingfile'] = os.devnull
+
 
 			# now check remainings for necessary values:
 			for key in dgeneral:

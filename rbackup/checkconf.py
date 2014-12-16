@@ -75,7 +75,7 @@ def checkconfiguration(conffile):
 			secdict = conf[section]  # stortcut to shorten latter code
 
 			if 'preexec' in secdict and secdict['preexec'] != '':
-				prescript = secdict['preexec']
+				prescript = secdict['preexec'].split()[0]  # cut off the command-line-args
 				if not os.path.isfile(prescript):
 					critical = crit('{0}:preexec is no file'.format(section))
 				if not os.path.isabs(prescript):
@@ -89,7 +89,7 @@ def checkconfiguration(conffile):
 						secdict['pretimeout'] = dlabelvals['pretimeout']
 
 			if 'postexec' in secdict and secdict['postexec'] != '':
-				postscript = secdict['postexec']
+				postscript = secdict['postexec'].split()[0]  # cut off the command-line-args
 				if not os.path.isfile(postscript):
 					critical = crit('{0}:postexec is no file'.format(section))
 				if not os.path.isabs(postscript):

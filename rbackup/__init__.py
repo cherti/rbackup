@@ -3,7 +3,8 @@ import subprocess, threading
 
 def run_cmd(cmd, timeout=0):
 
-	p = subprocess.Popen(cmd, shell=True)
+	cmd = cmd.split()
+	p = subprocess.Popen(cmd)
 
 	# start thread that's waiting for p to terminate
 	thr = threading.Thread(target=lambda: p.communicate())

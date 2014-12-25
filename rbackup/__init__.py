@@ -1,8 +1,9 @@
 import subprocess, threading, sys
 
 
-def run_cmd(cmd, timeout=0):
+def run_cmd(cmd, timeout=0, verbosity=0):
 
+	if verbosity > 1: print("Running command '" + cmd + '"')
 	cmd = cmd.split()
 	p = subprocess.Popen(cmd)
 
@@ -16,6 +17,7 @@ def run_cmd(cmd, timeout=0):
 		thr.join(timeout)
 
 		if thr.isAlive():
+			if verbosity > 1: print('terminating subprocess')
 			p.terminate()
 
 			# wait another timeout for process to be terminated
@@ -23,6 +25,7 @@ def run_cmd(cmd, timeout=0):
 
 			# if it is still alive now, kill it with fire!
 			if thr.isAlive():
+				if verbosity > 1: print('killing subprocess')
 				p.kill()
 
 	p.communicate()
@@ -38,8 +41,12 @@ def prepare(prescript, preto, path, config):
 	The job is stored in the specified pendingfile if specified so when
 	calling rbackup
 	"""
+	if config:
+		verbosity = config['verbosity']
+	else:
+		verbosity = 0
 
-	preret = run_cmd(prescript, preto) # make specified preparations
+	preret = run_cmd(prescript, preto, verbosity) # make specified preparations
 
 	if preret != 0:
 		if preret == 32256: # no-permission-error

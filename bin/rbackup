@@ -41,6 +41,7 @@ config = checkconf.checkconfiguration(args.conffile)
 
 # make verbosity and cmdline-args in general available in config-dict
 config['verbosity'] = args.verbosity
+verbosity = args.verbosity
 config['args'] = args
 
 # check whether args are such that we can work with them
@@ -50,9 +51,9 @@ checkconf.checkargs(args, config=config)
 lock = lockfile.Lockfile(config['general']['lockfile'])
 
 if not args.nopending:
-	print('doing stored jobs')
+	if verbosity > 0: print('doing stored jobs')
 	currjob = storer.jobstring(args)
-	storer.run_stored(config['general']['pendingfile'], skip_job=currjob)
+	storer.run_stored(config['general']['pendingfile'], skip_job=currjob, config['verbosity'])
 
 
 # giving status update what will be done (for user or logs)
@@ -93,7 +94,7 @@ if args.backup: # we want to create a backup
 
 	# decide whether we want to sync a entirely new backup or to copy one to a later stage
 	labels = config['general']['labelorder']  # get list of labels from config
-	print(labels)
+	if verbosity > 1: print('labels: ' + labels)
 	curr_label_index = labels.index(args.label) # get the index of the current label in list
 
 
@@ -113,7 +114,7 @@ if args.backup: # we want to create a backup
 
 
 	# tidy up devices afterwards
-	postret = run_cmd(post, postto)
+	postret = run_cmd(post, postto, verbosity)
 
 	if postret != 0:
 		if postret == 32256: # no-permission-error
@@ -149,7 +150,7 @@ else: # duplicate backup to another disk, args.dupl == True
 
 	time.sleep(5)
 
-	postret = run_cmd(srcpost, srcpostto)
+	postret = run_cmd(srcpost, srcpostto, verbosity)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error
@@ -158,7 +159,7 @@ else: # duplicate backup to another disk, args.dupl == True
 		print('post-script for device {0} finished with errors: exit code {1}'.format(args.fro, postret), file=sys.stderr)
 
 	# tidy up afterwards
-	postret = run_cmd(dstpost, dstpostto)
+	postret = run_cmd(dstpost, dstpostto, verbosity)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error

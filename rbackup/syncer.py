@@ -25,14 +25,16 @@ def simple_sync(src, dst, config, add_args=None):
 	#print(" ".join(rsync_cmd))
 
 	# sync to target
-	print('starting with rsync')
+	if config['verbosity'] > 0: print('starting with rsync')
+
 	rsync_ret = subprocess.call(rsync_cmd)
-	print('finished with rsync')
+
+	if config['verbosity'] > 0: print('finished with rsync')
 
 	return rsync_ret
 
 
-def reorder_backupdirs(label, maxcount, dir):
+def reorder_backupdirs(label, maxcount, dir, config=None):
 	"""
 	shifting all directories of the given label back by one
 	to make space for the new backup as label.0
@@ -42,6 +44,11 @@ def reorder_backupdirs(label, maxcount, dir):
 	the system to order the backups. Shouldn't have to be used, but
 	one never knows
 	"""
+
+	if config:
+		verbosity = config['verbosity']
+	else:
+		verbosity = 0
 
 	"""
 	olddir = None # used in case of chdir
@@ -77,9 +84,9 @@ def reorder_backupdirs(label, maxcount, dir):
 				shutil.move(dst, os.path.join(oosdir, '{0}-{1}'.format(dst, now)))
 				print('WARNING: Some folders might be out of system on device, should be checked', file=sys.stderr)
 
-			print('start move')
+			if verbosity > 0: print('start move')
 			shutil.move(src, dst)
-			print('finished move')
+			if verbosity > 0: print('finished move')
 
 	"""
 	if olddir: # if we changed directory, change back now
@@ -103,8 +110,8 @@ def backup_sync(source, backuppath, label, config):
 	# filter for dirs with this label
 	dirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(label) ])
 
-	print(bup)
-	print(dirs)
+	#print(bup)
+	#print(dirs)
 
 	# create basedir to which we want to backup now,
 	# either by hardlink-copying an old one or by creating it
@@ -118,13 +125,10 @@ def backup_sync(source, backuppath, label, config):
 		if os.path.exists(fulltempdstdir):
 			shutil.rmtree(fulltempdstdir)
 		#fullsrcdir = dirs[0]
-		print(dirs[0])
-		print(fulltempdstdir)
-		print("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
-		print('start with cp')
+		if config['verbosity'] > 1: print("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
+		if config['verbosity'] > 0: print('start with cp')
 		cpret = subprocess.call(['cp', '-al', dirs[0], fulltempdstdir])
-		#os.system("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
-		print('done with cp')
+		if config['verbosity'] > 0: print('done with cp')
 
 
 	# prepare excludes and includes as arguments for latter rsync-use
@@ -155,7 +159,7 @@ def backup_sync(source, backuppath, label, config):
 		# if the one we want to use is free, we do not need to reorder
 		if os.path.exists(os.path.join(bup, label + '.0')):
 			# if label.0 is already in use, then we have to
-			reorder_backupdirs(label, backupcount, bup)
+			reorder_backupdirs(label, backupcount, bup, config)
 
 		#finally move the synced one to the start
 		src = fulltempdstdir
@@ -170,6 +174,10 @@ def backup_copy(backuppath, srclabel, dstlabel, config):
 	create a snapshot based on other latest snapshots for
 	higher stages
 	"""
+	if config:
+		verbosity = config['verbosity']
+	else:
+		verbosity = 0
 
 	bup = backuppath
 	"""
@@ -190,12 +198,13 @@ def backup_copy(backuppath, srclabel, dstlabel, config):
 	# reordering only necessary if label.0 is already in use
 	targetpath = os.path.join(bup, '{0}.0'.format(dstlabel))
 	if os.path.exists(targetpath):
-		reorder_backupdirs(dstlabel, dstmax, bup) # free label.0
+		reorder_backupdirs(dstlabel, dstmax, bup, config) # free label.0
 
 	# create the new backup for this stage
 	#srcpath = scrdirs[-1]
-	print('cp2')
-	#cp_ret = os.system("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
+	if config['verbosity'] > 1: print("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
+	if config['verbosity'] > 0: print('start with cp')
 	cp_ret = subprocess.call(['cp', '-alT', srcdirs[-1], targetpath])
+	if config['verbosity'] > 0: print('done with cp')
 
 	return cp_ret

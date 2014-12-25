@@ -44,10 +44,11 @@ def store(args, storefile):
 	with open(storefile, 'a') as f:
 		print(jobstr, file=f)
 
-	print('jobstring {0} stored to be done later'.format(jobstr))
+	if args.verbosity > 0:
+		print('jobstring {0} stored to be done later'.format(jobstr))
 
 
-def run_stored(storefile, skip_job=None):
+def run_stored(storefile, skip_job=None, verbosity=0):
 	"""
 	try to run all stored jobs in subshell
 	"""
@@ -60,7 +61,9 @@ def run_stored(storefile, skip_job=None):
 			# duplicates from a list
 			runs = list(set(f.read().strip().split('\n')))
 
-			print(runs)
+			if verbosity > 0:
+				for run in runs:
+					print(run)
 
 			if skip_job and skip_job in runs:
 				# we don't need to run the exact same job

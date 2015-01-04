@@ -53,7 +53,7 @@ lock = lockfile.Lockfile(config['general']['lockfile'])
 if not args.nopending:
 	if verbosity > 0: print('doing stored jobs')
 	currjob = storer.jobstring(args)
-	storer.run_stored(config['general']['pendingfile'], skip_job=currjob, config['verbosity'])
+	storer.run_stored(config['general']['pendingfile'], skip_job=currjob, verbosity=config['verbosity'])
 
 
 # giving status update what will be done (for user or logs)
@@ -94,7 +94,7 @@ if args.backup: # we want to create a backup
 
 	# decide whether we want to sync a entirely new backup or to copy one to a later stage
 	labels = config['general']['labelorder']  # get list of labels from config
-	if verbosity > 1: print('labels: ' + labels)
+	if verbosity > 1: print('labels: ' + str(labels))
 	curr_label_index = labels.index(args.label) # get the index of the current label in list
 
 

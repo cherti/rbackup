@@ -22,10 +22,10 @@ def simple_sync(src, dst, config, add_args=None):
 
 	rsync_cmd += [src, dst]
 
-	#print(" ".join(rsync_cmd))
 
 	# sync to target
 	if config['verbosity'] > 0: print('starting with rsync')
+	if config['verbosity'] > 1: print(" ".join(rsync_cmd))
 
 	rsync_ret = subprocess.call(rsync_cmd)
 
@@ -64,8 +64,10 @@ def reorder_backupdirs(label, maxcount, dir, config=None):
 
 	# handle "overgrowth"
 	if len(dirs) >= maxcount: # we need to delete the last one
+		if verbosity > 0: print('start dropping last backuppoint')
 		shutil.rmtree(dirs[-1]) # actually remove the folder
 		dirs.remove(dirs[-1]) # remove the folder from dirlist
+		if verbosity > 0: print('done dropping last backuppoint')
 
 	# now move everything back by one
 	for i in range(len(dirs)-1, -1, -1):
@@ -117,7 +119,9 @@ def backup_sync(source, backuppath, label, config):
 	# either by hardlink-copying an old one or by creating it
 	fulltempdstdir = os.path.join(bup, "in_progress_{0}".format(label))
 	if os.path.exists(fulltempdstdir):
+		if config['verbosity'] > 0: print('dropping stale tempdir')
 		shutil.rmtree(fulltempdstdir)
+		if config['verbosity'] > 0: print('done dropping stale tempdir')
 
 	if len(dirs) == 0: # we have no backups yet, therefore start from scratch
 		os.makedirs(fulltempdstdir, exist_ok=True)

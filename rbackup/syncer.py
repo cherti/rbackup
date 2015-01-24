@@ -17,7 +17,10 @@ def simple_sync(src, dst, config, add_args=None):
 	if add_args:
 		rsync_cmd += add_args
 
-	src = os.path.abspath(src) #+ '/'
+	if src[-1] == '/': # make abspath while preserving trailing '/'
+		src = os.path.abspath(src) + '/'
+	else:
+		src = os.path.abspath(src)
 	dst = os.path.abspath(dst)
 
 	rsync_cmd += [src, dst]

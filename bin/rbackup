@@ -129,7 +129,7 @@ else: # duplicate backup to another disk, args.dupl == True
 	srcpreto = config[args.fro]['pretimeout']
 	srcpost = config[args.fro]['postexec']
 	srcpostto = config[args.fro]['posttimeout']
-	src = config['general']['backupsource']
+	src = config[args.fro]['backupdir'] + '/'
 
 	dstpre = config[args.to]['preexec']
 	dstpreto = config[args.to]['pretimeout']
@@ -140,7 +140,7 @@ else: # duplicate backup to another disk, args.dupl == True
 	prepare(srcpre, srcpreto, src, config)
 	prepare(dstpre, srcpostto, dst, config)
 
-	rsync_ret = syncer.simple_sync(src, dst, config)
+	rsync_ret = syncer.simple_sync(src, dst, config, add_args=['--hard-links'])
 
 	if rsync_ret != 0:
 		print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)

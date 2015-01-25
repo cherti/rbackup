@@ -129,6 +129,9 @@ def backup_sync(source, backuppath, label):
 	if len(dirs) != 0: 
 		add_rsync_args.append( '--link-dest={0}'.format(os.path.abspath(dirs[0])) )
 
+	if len(dirs) != 0: 
+		add_rsync_args.append( '--link-dest={0}'.format(os.path.abspath(dirs[0])) )
+
 	os.makedirs(fulltempdstdir, exist_ok=True)
 
 

@@ -111,6 +111,7 @@ def backup_sync(source, backuppath, label, config):
 	"""
 
 	bup = backuppath
+	add_rsync_args = [] # to store the additional args like in- and excludes
 
 	# filter for dirs with this label
 	dirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(label) ])
@@ -126,20 +127,13 @@ def backup_sync(source, backuppath, label, config):
 		shutil.rmtree(fulltempdstdir)
 		if config['verbosity'] > 0: print('done dropping stale tempdir')
 
-	if len(dirs) == 0: # we have no backups yet, therefore start from scratch
-		os.makedirs(fulltempdstdir, exist_ok=True)
-	else: # backups present, take one and update it (faster & saves space)
-		if os.path.exists(fulltempdstdir):
-			shutil.rmtree(fulltempdstdir)
-		#fullsrcdir = dirs[0]
-		if config['verbosity'] > 1: print("cp -al {0} {1}".format(dirs[0], fulltempdstdir))
-		if config['verbosity'] > 0: print('start with cp')
-		cpret = subprocess.call(['cp', '-al', dirs[0], fulltempdstdir])
-		if config['verbosity'] > 0: print('done with cp')
+	if len(dirs) != 0: 
+		add_rsync_args.append( '--link-dest={0}'.format(os.path.abspath(dirs[0])) )
+
+	os.makedirs(fulltempdstdir, exist_ok=True)
 
 
 	# prepare excludes and includes as arguments for latter rsync-use
-	add_rsync_args = [] # to store the additional args like in- and excludes
 
 	# in- and excludelist are only used if they are specified
 	if 'includelist' in config['general']:
@@ -160,6 +154,10 @@ def backup_sync(source, backuppath, label, config):
 
 	if ret_rsync == 0: # only continue if rsync finished successfully
 
+
+		waitingpath = os.path.join(bup, "ready_to_move_{0}".format(label))
+		shutil.move(fulltempdstdir, waitingpath)
+
 		#reorder backups
 		backupcount = config['labels'][label]
 
@@ -169,7 +167,7 @@ def backup_sync(source, backuppath, label, config):
 			reorder_backupdirs(label, backupcount, bup, config)
 
 		#finally move the synced one to the start
-		src = fulltempdstdir
+		src = waitingpath
 		dst = os.path.join(bup, '{0}.0'.format(label))
 		shutil.move(src, dst)
 

@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
-import configparser, sys, os, time, argparse
-from rbackup import storer, syncer, lockfile, checkconf, run_cmd, prepare
+import configparser, sys, os, time, argparse, builtins
 
 
-"""
- preparations
-"""
+# ===========================================================================
+#  preparations
+# ===========================================================================
 
 
 # now parse commandline-args
@@ -31,6 +30,11 @@ parser.add_argument('-v', action='count', default=0, dest='verbosity')
 
 args = parser.parse_args(sys.argv[1:])
 
+# necessary for the logger-module to know the verbosity
+builtins.verbosity = args.verbosity
+
+from rbackup import logger, checkconf
+
 if args.chkcfg: # just check configuration and exit
 	print('checking configuration-file', args.conffile)
 	checkconf.checkconfiguration(args.conffile)
@@ -47,20 +51,30 @@ config['args'] = args
 # check whether args are such that we can work with them
 checkconf.checkargs(args, config=config)
 
+# make configuration globally available
+builtins.conf = config
+
+# ===========================================================================
+#  preparations done
+#  now let's get to business
+# ===========================================================================
+
+from rbackup import storer, syncer, lockfile, checkconf, run_cmd, prepare
+
 # prepare lockfile
 lock = lockfile.Lockfile(config['general']['lockfile'])
 
 if not args.nopending:
-	if verbosity > 0: print('doing stored jobs')
+	logger.info('doing stored jobs')
 	currjob = storer.jobstring(args)
-	storer.run_stored(config['general']['pendingfile'], skip_job=currjob, verbosity=config['verbosity'])
+	storer.run_stored(config['general']['pendingfile'], skip_job=currjob)
 
 
 # giving status update what will be done (for user or logs)
 if args.backup:
-	print('making backup to label {0} on device {1}'.format(args.label, args.to))
+	logger.info('making backup to label {0} on device {1}'.format(args.label, args.to))
 elif args.to not in ['labels', 'general']:
-	print('duplicating backup from {0} to device {1}'.format(args.fro, args.to))
+	logger.info('duplicating backup from {0} to device {1}'.format(args.fro, args.to))
 
 
 if args.quiet: # if the user wanted to have a quiet run
@@ -90,37 +104,37 @@ if args.backup: # we want to create a backup
 	dst = config[args.to]['backupdir']
 	src = config['general']['backupsource']
 
-	prepare(pre, preto, dst, config)
+	prepare(pre, preto, dst)
 
 	# decide whether we want to sync a entirely new backup or to copy one to a later stage
 	labels = config['general']['labelorder']  # get list of labels from config
-	if verbosity > 1: print('labels: ' + str(labels))
+	logger.debug('labels: ' + str(labels))
 	curr_label_index = labels.index(args.label) # get the index of the current label in list
 
 
 	if curr_label_index == 0: # it's the first label, so sync a new backup
-		rsync_ret = syncer.backup_sync(src, dst, args.label, config) # ACTION !!!
+		rsync_ret = syncer.backup_sync(src, dst, args.label) # ACTION !!!
 
 		if rsync_ret != 0:
-			print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
+			logger.error('rsync finished with errors: exit code {0}'.format(rsync_ret))
 
 	else: # higher-order label, copy a backup into a later stage
 		prev_label = labels[curr_label_index-1] # get the previous label to copy from
 
-		cp_ret = syncer.backup_copy(dst, prev_label, args.label, config) # ACTION !!!
+		cp_ret = syncer.backup_copy(dst, prev_label, args.label) # ACTION !!!
 
 		if cp_ret != 0:
-			print('cp finished with errors: exit code {0}'.format(cp_ret), file=sys.stderr)
+			logger.error('cp finished with errors: exit code {0}'.format(cp_ret))
 
 
 	# tidy up devices afterwards
-	postret = run_cmd(post, postto, verbosity)
+	postret = run_cmd(post, postto)
 
 	if postret != 0:
 		if postret == 32256: # no-permission-error
-			print('no permission to execute post-script; is it executable?', file=sys.stderr)
+			logger.error('no permission to execute post-script; is it executable?')
 
-		print('post-script finished with errors: exit code {0}'.format(postret), file=sys.stderr)
+		logger.error('post-script finished with errors: exit code {0}'.format(postret))
 
 else: # duplicate backup to another disk, args.dupl == True
 
@@ -140,32 +154,32 @@ else: # duplicate backup to another disk, args.dupl == True
 	prepare(srcpre, srcpreto, src, config)
 	prepare(dstpre, srcpostto, dst, config)
 
-	rsync_ret = syncer.simple_sync(src, dst, config, add_args=['--hard-links'])
+	rsync_ret = syncer.simple_sync(src, dst, add_args=['--hard-links'])
 
 	if rsync_ret != 0:
-		print('rsync finished with errors: exit code {0}'.format(rsync_ret), file=sys.stderr)
+		logger.error('rsync finished with errors: exit code {0}'.format(rsync_ret))
 
 
 	# tidy up afterwards
 
 	time.sleep(5)
 
-	postret = run_cmd(srcpost, srcpostto, verbosity)
+	postret = run_cmd(srcpost, srcpostto)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error
-			print('no permission to execute post-script of device {0}; is it executable?'.format(args.fro), file=sys.stderr)
+			logger.error('no permission to execute post-script of device {0}; is it executable?'.format(args.fro))
 
-		print('post-script for device {0} finished with errors: exit code {1}'.format(args.fro, postret), file=sys.stderr)
+		logger.error('post-script for device {0} finished with errors: exit code {1}'.format(args.fro, postret))
 
 	# tidy up afterwards
-	postret = run_cmd(dstpost, dstpostto, verbosity)
+	postret = run_cmd(dstpost, dstpostto)
 
 	if postret != 0:
 		if preret == 32256: # no-permission-error
-			print('no permission to execute post-script of device {0}; is it executable?'.format(args.to), file=sys.stderr)
+			logger.error('no permission to execute post-script of device {0}; is it executable?'.format(args.to))
 
-		print('post-script for device {0} finished with errors: exit code {1}'.format(args.to, postret), file=sys.stderr)
+		logger.error('post-script for device {0} finished with errors: exit code {1}'.format(args.to, postret))
 
 
 lock.remove() # finally release lock when done

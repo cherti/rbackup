@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os, subprocess
+from rbackup import logger
 
 def jobstring(args):
 	"""
@@ -48,7 +49,7 @@ def store(args, storefile):
 		print('jobstring {0} stored to be done later'.format(jobstr))
 
 
-def run_stored(storefile, skip_job=None, verbosity=0):
+def run_stored(storefile, skip_job=None):
 	"""
 	try to run all stored jobs in subshell
 	"""
@@ -61,9 +62,7 @@ def run_stored(storefile, skip_job=None, verbosity=0):
 			# duplicates from a list
 			runs = list(set(f.read().strip().split('\n')))
 
-			if verbosity > 0:
-				for run in runs:
-					print(run)
+			logger.moreinfo('\n'.join(runs))
 
 			if skip_job and skip_job in runs:
 				# we don't need to run the exact same job

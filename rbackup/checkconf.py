@@ -16,20 +16,20 @@ def checkconfiguration(conffile):
 		sys.exit(1)  # early-errors_found, need to abort already
 
 	# make config to *real* dict
-	conf = dict(config)
-	for key in conf:
+	parsedconf = dict(config)
+	for key in parsedconf:
 		if key not in ['DEFAULT', 'labels']:
-			conf[key] = dict(conf[key])
+			parsedconf[key] = dict(parsedconf[key])
 
 	# we need to give a special treatment to the label-section when converting
 	# otherwise we risk loosing the order in the configuration which is necessary
 	# in fact, when converting to a dict we end up having no order anymore, which
 	# is bad for our concept 
-	conf['general']['labelorder'] = list(conf['labels'])
+	parsedconf['general']['labelorder'] = list(parsedconf['labels'])
 
 	# now, as we have the labelorder, we can finish converting everything
 	# to a dict for easier handling
-	conf['labels'] = dict(conf['labels'])
+	parsedconf['labels'] = dict(parsedconf['labels'])
 
 	critical = False
 
@@ -41,15 +41,15 @@ def checkconfiguration(conffile):
 		return True
 
 
-	if not set(['general', 'labels']).issubset(conf):
+	if not set(['general', 'labels']).issubset(parsedconf):
 		warn('section "general" and/or "label" missing')
 
-	for section in conf:
+	for section in parsedconf:
 		if section == 'general':
-			for key in conf['general']:
+			for key in parsedconf['general']:
 				if key == 'lockfile':
 					default = dgeneral.pop('lockfile')
-					entry = conf['general'][key]
+					entry = parsedconf['general'][key]
 
 					if not os.path.isabs(entry):
 						warn('general:lockfile - path not absolute, using ' + default)
@@ -59,13 +59,13 @@ def checkconfiguration(conffile):
 
 				elif key == 'backupsource':
 					dgeneral.pop('backupsource')
-					srcs = conf['general']['backupsource'].strip().split()
+					srcs = parsedconf['general']['backupsource'].strip().split()
 					for src in srcs:
 						if not (os.path.isdir(src) or os.path.isfile(src)):
 							warn('backupsource:{0} is neither directory nor file'.format(src))
 
 				elif key == 'pendingfile':
-					entry = conf['general'][key]
+					entry = parsedconf['general'][key]
 					if not os.path.isdir(os.path.dirname(entry)):
 						warn('directory of pendingfile invalid, cannot store jobs')
 						config['general']['pendingfile'] = os.devnull
@@ -78,18 +78,18 @@ def checkconfiguration(conffile):
 
 			# now set the remaining missings as defaults
 			for key in dgeneral:
-				conf['general'][key] = dgeneral[key]
+				parsedconf['general'][key] = dgeneral[key]
 
 		elif section == 'labels':
-			for key in conf['labels']:
+			for key in parsedconf['labels']:
 				try:
-					conf['labels'][key] = int(conf['labels'][key])
+					parsedconf['labels'][key] = int(parsedconf['labels'][key])
 				except ValueError:
 					critical = crit('labels:{0} is no int'.format(key))
 
 		else:  # all the backup-targets
 
-			secdict = conf[section]  # stortcut to shorten latter code
+			secdict = parsedconf[section]  # stortcut to shorten latter code
 
 			if 'preexec' in secdict and secdict['preexec'] != '':
 				prescript = secdict['preexec'].split()[0]  # cut off the command-line-args
@@ -127,7 +127,7 @@ def checkconfiguration(conffile):
 	if critical:
 		sys.exit(1)
 
-	return conf
+	return parsedconf
 
 
 
@@ -199,7 +199,7 @@ if __name__ == '__main__':
 		print('no such conffile', file=sys.stderr)
 		sys.exit(1)
 
-	conf = checkconfiguration(conffile)
+	parsedconf = checkconfiguration(conffile)
 
 	print('check finished')
 	print('no errors found')

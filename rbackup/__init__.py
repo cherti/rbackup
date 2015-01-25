@@ -1,9 +1,10 @@
 import subprocess, threading, sys
+from rbackup import logger
 
 
-def run_cmd(cmd, timeout=0, verbosity=0):
+def run_cmd(cmd, timeout=0):
 
-	if verbosity > 1: print("Running command '" + cmd + '"')
+	logger.debug("Running command '" + cmd + '"')
 	cmd = cmd.split()
 	p = subprocess.Popen(cmd)
 
@@ -33,7 +34,7 @@ def run_cmd(cmd, timeout=0, verbosity=0):
 	return p.returncode
 
 
-def prepare(prescript, preto, path, config):
+def prepare(prescript, preto, path):
 	"""
 	prepare device by using pre-script and check if everything seems ok
 	if we can't get the device up and running, exit here as there is no
@@ -41,12 +42,8 @@ def prepare(prescript, preto, path, config):
 	The job is stored in the specified pendingfile if specified so when
 	calling rbackup
 	"""
-	if config:
-		verbosity = config['verbosity']
-	else:
-		verbosity = 0
 
-	preret = run_cmd(prescript, preto, verbosity) # make specified preparations
+	preret = run_cmd(prescript, preto) # make specified preparations
 
 	if preret != 0:
 		if preret == 32256: # no-permission-error

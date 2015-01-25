@@ -4,15 +4,16 @@
 conffile = 'sample.conf'
 
 import os, sys, shutil, configparser, datetime, subprocess
+from rbackup import logger
 
 
-def simple_sync(src, dst, config, add_args=None):
+def simple_sync(src, dst, add_args=None):
 	"""
 	simply sync two directories using the additional rsync-arguments provided
 	"""
 
 	rsync_cmd = ["rsync", "-a", "--delete"]
-	rsync_cmd += config['general']['additional_rsync_args'].split()
+	rsync_cmd += conf['general']['additional_rsync_args'].split()
 
 	if add_args:
 		rsync_cmd += add_args
@@ -27,17 +28,17 @@ def simple_sync(src, dst, config, add_args=None):
 
 
 	# sync to target
-	if config['verbosity'] > 0: print('starting with rsync')
-	if config['verbosity'] > 1: print(" ".join(rsync_cmd))
+	logger.info('starting with rsync')
+	logger.debug(" ".join(rsync_cmd))
 
 	rsync_ret = subprocess.call(rsync_cmd)
 
-	if config['verbosity'] > 0: print('finished with rsync')
+	logger.info('finished with rsync')
 
 	return rsync_ret
 
 
-def reorder_backupdirs(label, maxcount, dir, config=None):
+def reorder_backupdirs(label, maxcount, dir):
 	"""
 	shifting all directories of the given label back by one
 	to make space for the new backup as label.0
@@ -47,11 +48,6 @@ def reorder_backupdirs(label, maxcount, dir, config=None):
 	the system to order the backups. Shouldn't have to be used, but
 	one never knows
 	"""
-
-	if config:
-		verbosity = config['verbosity']
-	else:
-		verbosity = 0
 
 	"""
 	olddir = None # used in case of chdir
@@ -67,12 +63,13 @@ def reorder_backupdirs(label, maxcount, dir, config=None):
 
 	# handle "overgrowth"
 	if len(dirs) >= maxcount: # we need to delete the last one
-		if verbosity > 0: print('start dropping last backuppoint')
+		logger.info('start dropping last backuppoint')
 		shutil.rmtree(dirs[-1]) # actually remove the folder
 		dirs.remove(dirs[-1]) # remove the folder from dirlist
-		if verbosity > 0: print('done dropping last backuppoint')
+		logger.info('done dropping last backuppoint')
 
 	# now move everything back by one
+	logger.info('start shifting backups')
 	for i in range(len(dirs)-1, -1, -1):
 		src = os.path.join(dir, '{0}.{1}'.format(label, i))
 		dst = os.path.join(dir, '{0}.{1}'.format(label, i+1))
@@ -87,11 +84,13 @@ def reorder_backupdirs(label, maxcount, dir, config=None):
 				os.mkdir(oosdir)
 				now = datetime.datetime.today()
 				shutil.move(dst, os.path.join(oosdir, '{0}-{1}'.format(dst, now)))
-				print('WARNING: Some folders might be out of system on device, should be checked', file=sys.stderr)
+				logger.warning('WARNING: Some folders might be out of system on device, should be checked')
 
-			if verbosity > 0: print('start move')
+			logger.moreinfo('start moving ' + src)
 			shutil.move(src, dst)
-			if verbosity > 0: print('finished move')
+			logger.moreinfo('finished moving '  + src)
+
+	logger.info('done shifting backups')
 
 	"""
 	if olddir: # if we changed directory, change back now
@@ -100,7 +99,7 @@ def reorder_backupdirs(label, maxcount, dir, config=None):
 
 
 
-def backup_sync(source, backuppath, label, config):
+def backup_sync(source, backuppath, label):
 	"""
 	create a new backup snapshot from data into the backupdir
 	on lowest stage (higher stages are done by backup_copy()
@@ -123,9 +122,9 @@ def backup_sync(source, backuppath, label, config):
 	# either by hardlink-copying an old one or by creating it
 	fulltempdstdir = os.path.join(bup, "in_progress_{0}".format(label))
 	if os.path.exists(fulltempdstdir):
-		if config['verbosity'] > 0: print('dropping stale tempdir')
+		logger.info('dropping stale tempdir')
 		shutil.rmtree(fulltempdstdir)
-		if config['verbosity'] > 0: print('done dropping stale tempdir')
+		logger.info('done dropping stale tempdir')
 
 	if len(dirs) != 0: 
 		add_rsync_args.append( '--link-dest={0}'.format(os.path.abspath(dirs[0])) )
@@ -136,53 +135,53 @@ def backup_sync(source, backuppath, label, config):
 	# prepare excludes and includes as arguments for latter rsync-use
 
 	# in- and excludelist are only used if they are specified
-	if 'includelist' in config['general']:
-		incl_lst = config['general']['includelist']
+	if 'includelist' in conf['general']:
+		incl_lst = conf['general']['includelist']
 
 		if os.path.exists(incl_lst): # use only if path is valid
-			add_rsync_args += ['--include-from=' + config['general']['includelist']]
+			add_rsync_args += ['--include-from=' + conf['general']['includelist']]
 
-	if 'excludelist' in config['general']:
-		excl_lst = config['general']['excludelist']
+	if 'excludelist' in conf['general']:
+		excl_lst = conf['general']['excludelist']
 
 		if os.path.exists(excl_lst): # use only if path is valid
-			add_rsync_args += ['--exclude-from=' + config['general']['excludelist']]
+			add_rsync_args += ['--exclude-from=' + conf['general']['excludelist']]
 
 
 	# now SYNC!!!
-	ret_rsync = simple_sync( source, fulltempdstdir, config, add_args=add_rsync_args)
+	ret_rsync = simple_sync( source, fulltempdstdir, add_args=add_rsync_args)
 
 	if ret_rsync == 0: # only continue if rsync finished successfully
 
 
 		waitingpath = os.path.join(bup, "ready_to_move_{0}".format(label))
+		logger.moreinfo('moving "in_progress_{0}" to "ready_to_move_{0}"'.format(label))
 		shutil.move(fulltempdstdir, waitingpath)
+		logger.debug('done moving "in_progress_{0}" to "ready_to_move_{0}"'.format(label))
 
 		#reorder backups
-		backupcount = config['labels'][label]
+		backupcount = conf['labels'][label]
 
 		# if the one we want to use is free, we do not need to reorder
 		if os.path.exists(os.path.join(bup, label + '.0')):
 			# if label.0 is already in use, then we have to
-			reorder_backupdirs(label, backupcount, bup, config)
+			reorder_backupdirs(label, backupcount, bup)
 
 		#finally move the synced one to the start
 		src = waitingpath
 		dst = os.path.join(bup, '{0}.0'.format(label))
+		logger.moreinfo('moving "ready_to_move_{0}" to "{0}.0"'.format(label))
 		shutil.move(src, dst)
+		logger.debug('done moving "ready_to_move_{0}" to "{0}.0"'.format(label))
 
 	return ret_rsync
 
 
-def backup_copy(backuppath, srclabel, dstlabel, config):
+def backup_copy(backuppath, srclabel, dstlabel):
 	"""
 	create a snapshot based on other latest snapshots for
 	higher stages
 	"""
-	if config:
-		verbosity = config['verbosity']
-	else:
-		verbosity = 0
 
 	bup = backuppath
 	"""
@@ -194,22 +193,22 @@ def backup_copy(backuppath, srclabel, dstlabel, config):
 	dstdirs = sorted([ os.path.join(bup, d) for d in os.listdir(bup) if d.startswith(dstlabel) ])
 
 	if len(srcdirs) == 0: # if we have no sources, we cannot do anything
-		print('previous stage not existent, aborting', file=sys.stderr)
+		logger.error('previous stage not existent, aborting')
 		sys.exit(1)
 
 	# get max number of dirs to store
-	dstmax = config['labels'][dstlabel]
+	dstmax = conf['labels'][dstlabel]
 
 	# reordering only necessary if label.0 is already in use
 	targetpath = os.path.join(bup, '{0}.0'.format(dstlabel))
 	if os.path.exists(targetpath):
-		reorder_backupdirs(dstlabel, dstmax, bup, config) # free label.0
+		reorder_backupdirs(dstlabel, dstmax, bup) # free label.0
 
 	# create the new backup for this stage
 	#srcpath = scrdirs[-1]
-	if config['verbosity'] > 1: print("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
-	if config['verbosity'] > 0: print('start with cp')
+	logger.info('start with cp')
+	logger.debug("cp -alT {0} {1}".format(srcdirs[-1], targetpath))
 	cp_ret = subprocess.call(['cp', '-alT', srcdirs[-1], targetpath])
-	if config['verbosity'] > 0: print('done with cp')
+	logger.info('done with cp')
 
 	return cp_ret

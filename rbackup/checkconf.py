@@ -104,6 +104,8 @@ def checkconfiguration(conffile):
 					except ValueError:
 						warn('{0}:pretimeout is no int, using {1}'.format(section, dlabelvals['pretimeout']))
 						secdict['pretimeout'] = dlabelvals['pretimeout']
+			else:
+				secdict['preexec'] = ''
 
 			if 'postexec' in secdict and secdict['postexec'] != '':
 				postscript = secdict['postexec'].split()[0]  # cut off the command-line-args
@@ -118,6 +120,8 @@ def checkconfiguration(conffile):
 					except ValueError:
 						warn('{0}:posttimeout is no int, using {1}'.format(section, dlabelvals['posttimeout']))
 						secdict['posttimeout'] = dlabelvals['posttimeout']
+			else:
+				secdict['postexec'] = ''
 
 
 	if critical:

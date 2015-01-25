@@ -2,6 +2,7 @@
 
 
 import sys, os, configparser
+from rbackup import logger
 
 def checkconfiguration(conffile):
 
@@ -12,7 +13,7 @@ def checkconfiguration(conffile):
 		config = configparser.ConfigParser()
 		config.read(conffile)
 	except:
-		print('error parsing config-file, is some basic syntax wrong?', file=sys.stderr)
+		logger.error('error parsing config-file, is some basic syntax wrong?')
 		sys.exit(1)  # early-errors_found, need to abort already
 
 	# make config to *real* dict
@@ -34,10 +35,10 @@ def checkconfiguration(conffile):
 	critical = False
 
 	def warn(message):
-		print('::(?) ' + message, file=sys.stderr)
+		logger.warning(message)
 
 	def crit(message):
-		print('::(!) ' + message, file=sys.stderr)
+		logger.error(message)
 		return True
 
 
@@ -134,15 +135,15 @@ def checkconfiguration(conffile):
 def checkargs(args, config=None):
 
 	if not os.path.exists(args.conffile):
-		print('invalid configuration-file specified', file=sys.stderr)
+		logger.error('invalid configuration-file specified')
 		sys.exit(38)
 
 	if args.dupl and args.backup: # too much to do
-		print('select either duplication or backup', file=sys.stderr)
+		logger.error('select either duplication or backup')
 		sys.exit(37)
 
 	if not (args.dupl or args.backup): # nothing to do
-		print('no mode selected, doing nothing')
+		logger.info('no mode selected, doing nothing')
 		sys.exit()
 
 	# in case we didn't get a config, read it (and check it beforehand)
@@ -150,7 +151,7 @@ def checkargs(args, config=None):
 		config = checkconfiguration(args.conffile)
 
 	if not args.to:
-		print('no destination-device specified', file=sys.stderr)
+		logger.error('no destination-device specified')
 		sys.exit(37)
 	else:
 		# check if section is valid
@@ -159,33 +160,34 @@ def checkargs(args, config=None):
 		secs.remove('labels')
 
 		if args.to not in secs:
-			print('unknown destination-device specified', file=sys.stderr)
+			logger.error('unknown destination-device specified')
 			sys.exit(37)
 
 	if args.dupl:
 		if not args.fro: # sourcedevice missing
-			print('no source-device specified', file=sys.stderr)
+			logger.error('no source-device specified')
 			sys.exit(37)
 		else:
 			# check if section is valid
 			if args.fro not in secs:
-				print('unknown source-device specified', file=sys.stderr)
+				logger.error('unknown source-device specified')
 				sys.exit(37)
 
 		if args.to == args.fro:
-			print('What the heck is your plan, dude!?')
-			print("I'm a backup-tool, I'm not joining your crazyness.")
+			logger.info('What the heck is your plan, dude!?')
+			logger.info("I'm a backup-tool, I'm not joining your crazyness.")
+			sys.exit()
 	else: # args.backup
 		if not args.label: # label to backup to missing
-			print('no label to backup to specified', file=sys.stderr)
+			logger.error('no label to backup to specified')
 			sys.exit(37)
 		elif args.label in ['labels', 'general']:
-			print('invalid label specified', file=sys.stderr)
+			logger.error('invalid label specified')
 			sys.exit(37)
 		else:
 			# check if label is valid
 			if args.label not in config['labels']:
-				print('unknown label specified', file=sys.stderr)
+				logger.error('unknown label specified')
 				sys.exit(37)
 
 
@@ -196,11 +198,11 @@ if __name__ == '__main__':
 	conffile = sys.argv[1]
 
 	if not os.path.exists(conffile):
-		print('no such conffile', file=sys.stderr)
+		logger.error('no such conffile')
 		sys.exit(1)
 
 	parsedconf = checkconfiguration(conffile)
 
-	print('check finished')
-	print('no errors found')
+	logger.info('check finished')
+	logger.info('no errors found')
 

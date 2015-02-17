@@ -4,7 +4,7 @@ can create and remove lockfiles
 
 """
 
-import os, sys
+import os, sys, subprocess
 
 class Lockfile(object):
 
@@ -27,11 +27,32 @@ class Lockfile(object):
 			with open(self.path, "r") as f:
 				procname, pid = f.read().strip().split()
 
-			if procname == sys.argv[0].strip() and pid == str(os.getpid()):
+
+			locked_pids = subprocess.getoutput('pgrep {0}'.format(procname)).split('\n')
+
+			if pid in locked_pids:  # the process setting the pidfile is still running
 				return True
 			else:
 				print('removing stale lockfile')
 				self.remove()
+				return False
+		else:
+			return False
+
+
+	def is_owned(self):
+		"""
+		check if the lockfile set is ours
+		to avoid race-condition-fails if
+		two processes of this kind run
+		"""
+		if os.path.exists(self.path):
+			with open(self.path, "r") as f:
+				procname, pid = f.read().strip().split()
+
+			if procname == sys.argv[0] and pid == str(os.getpid()):
+				return True
+			else:
 				return False
 		else:
 			return False

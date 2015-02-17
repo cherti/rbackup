@@ -90,11 +90,17 @@ elif args.Quiet:
 # here was def prepade
 
 
-while lock.isValid(): # wait for other processes of this kind to terminate via block
-	time.sleep(30)
+# ensure having only one backup-process running at a time
+# to avoid inconsistencies due to interfering backup-attempts
+# the while-construct might look a little strange, but is ment
+# to guarantee an ownership-check after lock-creation to minimize
+# the chance for fails due to race conditions
+while not lock.is_owned():
+	if lock.isValid():
+		time.sleep(30)
+	else:
+		lock.create()
 
-# now create lock to let other processes know that we want to do a backup
-lock.create()
 
 if args.backup: # we want to create a backup
 	pre = config[args.to]['preexec']

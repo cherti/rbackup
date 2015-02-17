@@ -156,6 +156,11 @@ def backup_sync(source, backuppath, label):
 
 	if ret_rsync == 0: # only continue if rsync finished successfully
 
+		# add datemarker to backup
+		logger.moreinfo('add datefile')
+		datefile = os.path.join(fulltempdstdir, "date_of_backup")
+		with open(datefile, 'w') as f:
+			print(str(datetime.datetime.now()), file=f)
 
 		waitingpath = os.path.join(bup, "ready_to_move_{0}".format(label))
 		logger.moreinfo('moving "in_progress_{0}" to "ready_to_move_{0}"'.format(label))

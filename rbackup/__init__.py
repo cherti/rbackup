@@ -51,6 +51,6 @@ def prepare(prescript, preto, path):
 
 		print('prescript {0} exited nonzero, exiting as well'.format(prescript), file=sys.stderr)
 
-		if config['args'].store:
-			storer.store(config['args'], config['general']['pendingfile'])
+		if conf['args'].store:
+			storer.store(conf['args'], conf['general']['pendingfile'])
 		sys.exit(1)

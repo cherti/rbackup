@@ -4,6 +4,10 @@ from rbackup import logger
 
 def run_cmd(cmd, timeout=0):
 
+	if cmd.strip() == '':  # test if we actually have a prescript
+		# if no prescript specified:
+		return 0  # returnvalue for "everything is fine"
+
 	logger.debug("Running command '" + cmd + '"')
 	cmd = cmd.split()
 	p = subprocess.Popen(cmd)

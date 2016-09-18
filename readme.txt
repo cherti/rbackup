@@ -63,3 +63,6 @@ zero, e.g. because the device is not present, can be stored
 to be rerun later. Unless specified otherwise, rbackup
 checks for stored runs before running the actual triggered
 job and tries to run them beforehand.
+
+The provided PKGBUILD is intended for building by cloning
+and calling makepkg in this very directory.

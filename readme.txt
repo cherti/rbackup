@@ -66,3 +66,6 @@ job and tries to run them beforehand.
 
 The provided PKGBUILD is intended for building by cloning
 and calling makepkg in this very directory.
+
+
+This software is licensed under the GNU General Public License v3.
